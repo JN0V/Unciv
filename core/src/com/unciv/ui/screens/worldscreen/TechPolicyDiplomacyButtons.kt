@@ -30,12 +30,16 @@ import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.restoreUndoCheckpo
 
 /** A holder for Tech, Policies and Diplomacy buttons going in the top left of the WorldScreen just under WorldScreenTopBar */
 class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScreen.skin) {
+    /** Portrait layout: smaller tech button and icon buttons so the row fits a phone width */
+    private val compact = worldScreen.portraitLayout
+    private val iconPad = if (compact) 8f else 15f
+    private val iconSize = if (compact) 26f else 30f
     private val fogOfWarButtonHolder = Container<Button?>()
     private val fogOfWarButton = "Fog of War".toTextButton()
 
     private val techButtonHolder = Container<Table?>()
     private val pickTechButton = Table(skin)
-    private val pickTechLabel = "".toLabel(Color.WHITE, 30)
+    private val pickTechLabel = "".toLabel(Color.WHITE, if (worldScreen.portraitLayout) 20 else 30)
 
     private val policyButtonHolder = Container<Button?>()
     private val policyScreenButton = Button(skin)
@@ -68,29 +72,29 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         }
 
         pickTechButton.background = BaseScreen.skinStrings.getUiBackground("WorldScreen/PickTechButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, colorFromRGB(7, 46, 43))
-        pickTechButton.defaults().pad(20f)
+        pickTechButton.defaults().pad(if (compact) 10f else 20f)
         pickTechButton.add(pickTechLabel)
         techButtonHolder.onActivation(UncivSound.Paper, KeyboardBinding.TechnologyTree) {
             game.pushScreen{ TechPickerScreen(viewingCiv.getCiv()) }
         }
 
-        undoButton.add(ImageGetter.getImage("OtherIcons/Undo")).size(30f).pad(15f)
+        undoButton.add(ImageGetter.getImage("OtherIcons/Undo")).size(iconSize).pad(iconPad)
         undoButton.onActivation(binding = KeyboardBinding.Undo) {
             handleUndo()
         }
 
-        policyScreenButton.add(ImageGetter.getImage("OtherIcons/Policies")).size(30f).pad(15f)
+        policyScreenButton.add(ImageGetter.getImage("OtherIcons/Policies")).size(iconSize).pad(iconPad)
         policyButtonHolder.onActivation(binding = KeyboardBinding.SocialPolicies) {
             game.pushScreen{ PolicyPickerScreen(worldScreen.selectedCiv, worldScreen.canChangeState) }
         }
 
-        diplomacyButton.add(ImageGetter.getImage("OtherIcons/DiplomacyW")).size(30f).pad(15f)
+        diplomacyButton.add(ImageGetter.getImage("OtherIcons/DiplomacyW")).size(iconSize).pad(iconPad)
         diplomacyButtonHolder.onActivation(binding = KeyboardBinding.Diplomacy) {
             game.pushScreen{ DiplomacyScreen(worldScreen.selectedGameView.civView) }
         }
 
         if (game.gameInfo!!.isEspionageEnabled()) {
-            espionageButton.add(ImageGetter.getImage("OtherIcons/Espionage")).size(30f).pad(15f)
+            espionageButton.add(ImageGetter.getImage("OtherIcons/Espionage")).size(iconSize).pad(iconPad)
             espionageButtonHolder.onActivation(binding = KeyboardBinding.Espionage) {
                 // We want to make sure to deselect a spy in the case that the player wants to cancel moving
                 // the spy on the map screen by pressing this button

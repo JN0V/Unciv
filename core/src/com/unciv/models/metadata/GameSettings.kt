@@ -51,6 +51,8 @@ class GameSettings {
     // Defaulting this to "" - and implement the fallback only in NotificationsScroll leads to Options popup and actual effect being in disagreement!
     var notificationScroll: String = NotificationsScroll.UserSetting.default().name
     var showMinimap = true
+    /** Portrait (phone) layout: [LayoutMode.Auto] follows the screen orientation */
+    var layoutMode: LayoutMode = LayoutMode.Auto
     var showTutorials = true
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()
@@ -263,6 +265,16 @@ class GameSettings {
     }
 
     enum class NationPickerListMode { Icons, List }
+
+    /** Which WorldScreen layout to use. [Auto] picks [Portrait] when the screen is taller than wide. */
+    enum class LayoutMode { Auto, Portrait, Classic }
+
+    /** True when the portrait (one-handed phone) layout should be used for a screen with the given orientation */
+    fun usePortraitLayout(screenIsPortrait: Boolean) = when (layoutMode) {
+        LayoutMode.Auto -> screenIsPortrait
+        LayoutMode.Portrait -> true
+        LayoutMode.Classic -> false
+    }
 
     /**
      *  Knowledge on Window "state", limited.

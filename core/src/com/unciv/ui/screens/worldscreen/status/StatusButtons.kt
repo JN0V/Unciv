@@ -4,7 +4,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Disposable
 
 class StatusButtons(
-    val nextTurnButton: NextTurnButton
+    val nextTurnButton: NextTurnButton,
+    /** false when the portrait layout hosts the next turn button elsewhere */
+    private val includeNextTurnButton: Boolean = true
 ) : Table(), Disposable {
     var autoPlayStatusButton: AutoPlayStatusButton? = null
     var multiplayerStatusButton: MultiplayerStatusButton? = null
@@ -13,13 +15,13 @@ class StatusButtons(
     private val padYSpace = 5f
     
     init {
-        add(nextTurnButton)
+        if (includeNextTurnButton) add(nextTurnButton)
     }
     
     fun update(verticalWrap: Boolean) {
         clear()
         if(verticalWrap) {
-            add(nextTurnButton)
+            if (includeNextTurnButton) add(nextTurnButton)
             smallUnitButton?.let {
                 row()
                 add(it).padTop(padYSpace).right()
@@ -36,7 +38,7 @@ class StatusButtons(
             multiplayerStatusButton?.let { add(it).padRight(padXSpace).top() }
             autoPlayStatusButton?.let { add(it).padRight(padXSpace).top() }
             smallUnitButton?.let { add(it).padRight(padXSpace).top() }
-            add(nextTurnButton)
+            if (includeNextTurnButton) add(nextTurnButton)
         }
         pack()
     }

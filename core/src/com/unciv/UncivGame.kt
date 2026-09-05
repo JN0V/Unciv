@@ -175,7 +175,9 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
 
                 ImageGetter.ruleset = vanillaRuleset // so that we can enter the map editor without having to load a game first
 
+                val debugLoad = System.getenv("UNCIV_DEBUG_LOAD") // Development aid: open a save file directly
                 when {
+                    debugLoad != null -> Concurrency.run("DebugLoad") { loadGame(files.loadGameFromFile(Gdx.files.absolute(debugLoad))) }
                     settings.isFreshlyCreated -> setAsRootScreen(LanguagePickerScreen())
                     deepLinkedMultiplayerGame == null -> setAsRootScreen(MainMenuScreen())
                     else -> tryLoadDeepLinkedGame()

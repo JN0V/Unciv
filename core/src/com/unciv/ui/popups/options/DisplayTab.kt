@@ -49,6 +49,9 @@ internal class DisplayTab(
 
         addHeader("UI")
 
+        addSelectBox("Layout", settings::layoutMode, GameSettings.LayoutMode.entries) { _, _ ->
+            reloadWorldAndOptions()
+        }
         addNotificationScrollSelect()
         addCheckbox("Show minimap", settings::showMinimap, updateWorld = true)
         addCheckbox("Show tutorials", settings.showTutorials, updateWorld = true, newRow = false) { settings.showTutorials = it }

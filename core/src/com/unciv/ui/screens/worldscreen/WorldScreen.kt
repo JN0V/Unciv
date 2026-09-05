@@ -60,6 +60,7 @@ import com.unciv.ui.screens.worldscreen.status.MultiplayerStatusButton
 import com.unciv.ui.screens.worldscreen.status.NextTurnButton
 import com.unciv.ui.screens.worldscreen.status.NextTurnProgress
 import com.unciv.ui.screens.worldscreen.status.SmallUnitButton
+import com.unciv.ui.screens.worldscreen.portrait.WorldScreenBottomSheet
 import com.unciv.ui.screens.worldscreen.status.StatusButtons
 import com.unciv.ui.screens.worldscreen.topbar.WorldScreenTopBar
 import com.unciv.ui.screens.worldscreen.unit.AutoPlay
@@ -133,6 +134,9 @@ class WorldScreen(
     internal var waitingForAutosave = false
     private val mapVisualization = MapVisualization(gameInfo, viewingCiv)
 
+    /** Portrait (phone) layout: bottom sheet instead of floating unit/actions/next-turn widgets */
+    internal val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+
     // Floating Widgets going counter-clockwise
     internal val topBar = WorldScreenTopBar(this)
     internal val techPolicyAndDiplomacy = TechPolicyDiplomacyButtons(this)
@@ -146,7 +150,8 @@ class WorldScreen(
     private val bottomTileInfoTable = TileInfoTable(this)
     internal val notificationsScroll = NotificationsScroll(this)
     internal val nextTurnButton = NextTurnButton(this)
-    private val statusButtons = StatusButtons(nextTurnButton)
+    private val statusButtons = StatusButtons(nextTurnButton, includeNextTurnButton = !portraitLayout)
+    private val bottomSheet = if (portraitLayout) WorldScreenBottomSheet(this, bottomUnitTable, nextTurnButton) else null
     internal val smallUnitButton = SmallUnitButton(this, statusButtons)
     private val tutorialTaskTable = Table().apply {
         background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
@@ -164,7 +169,7 @@ class WorldScreen(
 
     init {
         // notifications are right-aligned, they take up only as much space as necessary.
-        notificationsScroll.width = stage.width / 2
+        notificationsScroll.width = if (portraitLayout) stage.width else stage.width / 2
 
         minimapWrapper.x = stage.width - minimapWrapper.width
 
@@ -187,10 +192,13 @@ class WorldScreen(
         stage.addActor(zoomController)
         zoomController.isVisible = UncivGame.Current.settings.showZoomButtons
 
-        stage.addActor(bottomUnitTable)
-        stage.addActor(unitActionsTable)
+        if (bottomSheet == null) {
+            stage.addActor(bottomUnitTable)
+            stage.addActor(unitActionsTable)
+        }
         stage.addActor(bottomTileInfoTable)
         stage.addActor(minimapWrapper)
+        if (bottomSheet != null) stage.addActor(bottomSheet)
         battleTable.width = stage.width / 3
         battleTable.x = stage.width / 3
         stage.addActor(battleTable)
@@ -335,6 +343,7 @@ class WorldScreen(
         notificationsScroll.isVisible = uiEnabled
         minimapWrapper.isVisible = uiEnabled
         bottomUnitTable.isVisible = uiEnabled
+        bottomSheet?.isVisible = uiEnabled
         if (uiEnabled) battleTable.update() else battleTable.isVisible = false
     }
 
@@ -400,8 +409,10 @@ class WorldScreen(
             minimapWrapper.update(getGameViewConsideringForOfWar().civView.getCiv())
             bottomTileInfoTable.civView = getGameViewConsideringForOfWar().civView
             bottomTileInfoTable.updateTileTable(mapHolder.selectedTile)
-            bottomTileInfoTable.x = stage.width - bottomTileInfoTable.width
-            bottomTileInfoTable.y = if (game.settings.showMinimap) minimapWrapper.height + 5f else 0f
+            if (bottomSheet == null) {
+                bottomTileInfoTable.x = stage.width - bottomTileInfoTable.width
+                bottomTileInfoTable.y = if (game.settings.showMinimap) minimapWrapper.height + 5f else 0f
+            }
 
             battleTable.update()
 
@@ -435,8 +446,12 @@ class WorldScreen(
 
         if (techPolicyAndDiplomacy.update())
             displayTutorial(TutorialTrigger.OtherCivEncountered)
+        if (portraitLayout && tutorialTaskTable.isVisible) {
+            // No room beside the tech/policy buttons on a phone: stack the task below them
+            tutorialTaskTable.y = techPolicyAndDiplomacy.y - tutorialTaskTable.height - 5f
+        }
 
-        if (uiEnabled) {
+        if (uiEnabled && bottomSheet == null) {
             // UnitActionsTable measures geometry (its own y, techPolicyAndDiplomacy and fogOfWarButton), so call update this late
             unitActionsTable.y = bottomUnitTable.height
             unitActionsTable.update(bottomUnitTable.selectedUnit?.getUnit())
@@ -471,14 +486,25 @@ class WorldScreen(
 
         updateGameplayButtons()
 
+        // Portrait layout: the sheet is laid out last (next turn button text may have changed), everything else stacks above it
+        val bottomOffset = if (bottomSheet != null && uiEnabled) {
+            bottomSheet.update(bottomUnitTable.selectedUnit?.getUnit())
+            minimapWrapper.y = bottomSheet.height
+            bottomTileInfoTable.setPosition(0f, bottomSheet.height + 5f)
+            if (battleTable.isVisible) battleTable.y = bottomSheet.height + 5f
+            bottomSheet.height
+        } else 0f
+
         val coveredNotificationsTop = stage.height - statusButtons.y
-        val coveredNotificationsBottom = (bottomTileInfoTable.height + bottomTileInfoTable.y)
+        val coveredNotificationsBottom = if (bottomSheet != null) bottomOffset + bottomTileInfoTable.height + 5f
+            else (bottomTileInfoTable.height + bottomTileInfoTable.y)
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
 
         val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
+        else if (bottomSheet != null) 0f
         else bottomTileInfoTable.width
-        zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f, Align.bottomRight)
+        zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f + bottomOffset, Align.bottomRight)
     }
 
     private fun getCurrentTutorialTask(): Event? {
@@ -785,6 +811,20 @@ class WorldScreen(
         }
 
         super.render(delta)
+        debugScreenshotIfRequested()
+    }
+
+    private var debugFramesRendered = 0
+    /** Development aid: with env UNCIV_DEBUG_SCREENSHOT=<png path>, saves the world screen after a few frames and exits. */
+    private fun debugScreenshotIfRequested() {
+        val path = System.getenv("UNCIV_DEBUG_SCREENSHOT") ?: return
+        debugFramesRendered++
+        if (debugFramesRendered == 20 && System.getenv("UNCIV_DEBUG_ACTION") == "more") bottomSheet?.openMoreMenu()
+        if (debugFramesRendered < 60) return
+        val pixmap = com.badlogic.gdx.graphics.Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
+        com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.absolute(path), pixmap, java.util.zip.Deflater.DEFAULT_COMPRESSION, true)
+        pixmap.dispose()
+        Gdx.app.exit()
     }
 
 
