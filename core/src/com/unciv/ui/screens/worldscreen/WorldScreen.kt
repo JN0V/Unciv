@@ -816,20 +816,16 @@ class WorldScreen(
         }
 
         super.render(delta)
-        debugScreenshotIfRequested()
     }
 
-    private var debugFramesRendered = 0
-    /** Development aid: with env UNCIV_DEBUG_SCREENSHOT=<png path>, saves the world screen after a few frames and exits. */
-    private fun debugScreenshotIfRequested() {
-        val path = System.getenv("UNCIV_DEBUG_SCREENSHOT") ?: return
-        debugFramesRendered++
-        if (debugFramesRendered == 20 && System.getenv("UNCIV_DEBUG_ACTION") == "more") bottomSheet?.openMoreMenu()
-        if (debugFramesRendered < 60) return
-        val pixmap = com.badlogic.gdx.graphics.Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
-        com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.absolute(path), pixmap, java.util.zip.Deflater.DEFAULT_COMPRESSION, true)
-        pixmap.dispose()
-        Gdx.app.exit()
+    /** Development aid (see [BaseScreen.debugScreenshotIfRequested]): env UNCIV_DEBUG_ACTION picks what to do before the capture */
+    override fun debugAction(action: String) {
+        when (action) {
+            "more" -> bottomSheet?.openMoreMenu()
+            "city" -> viewingCiv.cities.firstOrNull()?.let { city ->
+                game.pushScreen { CityScreen(selectedGameView.getCityView(city)) }
+            }
+        }
     }
 
 

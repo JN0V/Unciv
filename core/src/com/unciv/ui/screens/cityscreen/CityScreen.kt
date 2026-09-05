@@ -63,6 +63,10 @@ class CityScreen(
 
     private val viewingCiv: CivView = cityView.gameView.civView
 
+    /** Phone layout: header + map + tabs, see [CityScreenPortrait] */
+    private val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+    private var portrait: CityScreenPortrait? = null
+
     internal val isSpying = cityView.isEspionageEnabled() && !cityView.isOwnedByViewer() && !viewingCiv.isSpectator()
 
     /**
@@ -153,13 +157,24 @@ class CityScreen(
 
         addTiles()
 
-        // If we are spying then we shoulden't be able to see their construction screen.
-        constructionsTable.addActorsToStage()
-        stage.addActor(cityStatsTable)
-        stage.addActor(selectedConstructionTable)
-        stage.addActor(tileTable)
-        stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
-        stage.addActor(exitCityButton)
+        if (portraitLayout) {
+            val portraitLayout = CityScreenPortrait(this, constructionsTable, cityStatsTable, tileTable, razeCityButtonHolder)
+            portrait = portraitLayout
+            mapScrollPane.setBounds(0f, portraitLayout.mapBottom, stage.width, stage.height - portraitLayout.mapBottom - 132f)
+            mapScrollPane.layout()
+            mapScrollPane.scrollPercentX = 0.5f
+            mapScrollPane.scrollPercentY = 0.5f
+            mapScrollPane.updateVisualScroll()
+            stage.addActor(portraitLayout)
+        } else {
+            // If we are spying then we shoulden't be able to see their construction screen.
+            constructionsTable.addActorsToStage()
+            stage.addActor(cityStatsTable)
+            stage.addActor(selectedConstructionTable)
+            stage.addActor(tileTable)
+            stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
+            stage.addActor(exitCityButton)
+        }
 
         cityView.updateCityStats()
         updateSync() // NOT async since that gives a "visual flash" when entering the city
@@ -167,7 +182,7 @@ class CityScreen(
         globalShortcuts.add(KeyboardBinding.PreviousCity) { page(-1) }
         globalShortcuts.add(KeyboardBinding.NextCity) { page(1) }
 
-        if (isPortrait()) mapScrollPane.apply {
+        if (isPortrait() && !portraitLayout) mapScrollPane.apply {
             // center scrolling so city center sits more to the bottom right
             scrollX = (maxX - constructionsTable.getLowerWidth() - posFromEdge) / 2
             scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
@@ -189,6 +204,14 @@ class CityScreen(
     }
     
     internal fun updateSync(){
+        if (portrait != null) {
+            updateAnnexAndRazeCityButton()
+            razeCityButtonHolder.remove()  // the portrait Info tab hosts it instead of the top-center position
+            portrait!!.onTileSelected()
+            portrait!!.update()
+            updateTileGroups()
+            return
+        }
         constructionsTable.isVisible = !isSpying
         constructionsTable.update(selectedConstruction)
         updateWithoutConstructionAndMap()
@@ -198,6 +221,12 @@ class CityScreen(
     }
 
     internal fun updateWithoutConstructionAndMap() {
+        if (portrait != null) {
+            updateAnnexAndRazeCityButton()
+            razeCityButtonHolder.remove()
+            portrait!!.update()
+            return
+        }
         // Bottom right: Tile or selected construction info
         tileTable.update(selectedTile)
         tileTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)

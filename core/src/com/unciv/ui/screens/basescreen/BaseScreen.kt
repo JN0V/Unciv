@@ -90,7 +90,24 @@ abstract class BaseScreen : Screen {
 
         stage.act()
         stage.draw()
+        debugScreenshotIfRequested()
     }
+
+    private var debugFramesRendered = 0
+    /** Development aid: with env UNCIV_DEBUG_SCREENSHOT=<png path>, saves the current screen after a few frames and exits.
+     *  Env UNCIV_DEBUG_ACTION triggers [debugAction] once before that. */
+    private fun debugScreenshotIfRequested() {
+        val path = System.getenv("UNCIV_DEBUG_SCREENSHOT") ?: return
+        debugFramesRendered++
+        if (debugFramesRendered == 20) System.getenv("UNCIV_DEBUG_ACTION")?.let { debugAction(it) }
+        val targetScreen = System.getenv("UNCIV_DEBUG_SCREEN") ?: "WorldScreen"  // which screen class to capture
+        if (javaClass.simpleName != targetScreen || debugFramesRendered < 60) return
+        val pixmap = com.badlogic.gdx.graphics.Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
+        com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.absolute(path), pixmap, java.util.zip.Deflater.DEFAULT_COMPRESSION, true)
+        pixmap.dispose()
+        Gdx.app.exit()
+    }
+    protected open fun debugAction(action: String) {}
 
     override fun resize(width: Int, height: Int) {
         if (this !is RecreateOnResize) {

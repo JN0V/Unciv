@@ -53,7 +53,7 @@ import kotlin.math.max
 import kotlin.math.min
 import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
 
-private class ConstructionButtonDTO(
+internal class ConstructionButtonDTO(
     val construction: IConstruction,
     val buttonText: String,
     val resourcesRequired: HashMap<String, Int>? = null,
@@ -278,7 +278,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         }
     }
 
-    private fun getConstructionButtonDTOs(): ArrayList<ConstructionButtonDTO> {
+    internal fun getConstructionButtonDTOs(): ArrayList<ConstructionButtonDTO> {
         val constructionButtonDTOList = ArrayList<ConstructionButtonDTO>()
 
         val cityConstructions = cityView.constructions
@@ -645,7 +645,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     private fun isSelectedQueueEntry(): Boolean = selectedQueueEntry >= 0
 
-    private fun cannotAddConstructionToQueue(construction: IConstruction): Boolean {
+    internal fun cannotAddConstructionToQueue(construction: IConstruction): Boolean {
         val cityConstructions = cityView.constructions
         return cityConstructions.isQueueFull()
                 || !cityScreen.canChangeState
@@ -654,7 +654,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 || construction is PerpetualConstruction && cityConstructions.isBeingConstructedOrEnqueued(construction.name)
     }
 
-    private fun addConstructionToQueue(construction: IConstruction) {
+    internal fun addConstructionToQueue(construction: IConstruction) {
         // Some evil person decided to double tap real fast - #4977
         if (cannotAddConstructionToQueue(construction))
             return
@@ -723,7 +723,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private fun getLowerPriorityButton(constructionQueueIndex: Int, name: String) =
         getMovePriorityButton(Align.bottom, KeyboardBinding.LowerPriority, constructionQueueIndex, name, cityView::tryLowerPriority)
 
-    private fun getRemoveFromQueueButton(constructionQueueIndex: Int): Table {
+    internal fun getRemoveFromQueueButton(constructionQueueIndex: Int): Table {
         val tab = Table()
         tab.add(ImageGetter.getImage("OtherIcons/Stop").surroundWithCircle(40f))
         tab.touchable = Touchable.enabled
