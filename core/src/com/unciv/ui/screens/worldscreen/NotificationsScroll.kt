@@ -49,12 +49,12 @@ class NotificationsScroll(
     }
 
     private companion object {
-        /** Scale the entire ScrollPane by this factor */
-        const val scaleFactor = 0.5f
-        /** Complement of [scaleFactor] because multiplication is cheaper */
-        const val inverseScaleFactor = 1f / scaleFactor
-        /** Limit width by wrapping labels to this percentage of the stage */
-        const val maxWidthOfStage = 0.333f
+        /** Scale the entire ScrollPane by this factor (classic layout; portrait uses [NotificationsScroll.scaleFactor]) */
+        const val classicScaleFactor = 0.5f
+        const val portraitScaleFactor = 0.8f
+        /** Limit width by wrapping labels to this percentage of the stage (classic; portrait uses [NotificationsScroll.maxWidthOfStage]) */
+        const val classicMaxWidthOfStage = 0.333f
+        const val portraitMaxWidthOfStage = 0.9f
         /** Logical size of the notification icons */
         const val iconSize = 30f
         /** Logical font size used in notification and category labels */
@@ -90,6 +90,10 @@ class NotificationsScroll(
 
     //region private fields
     private var notificationsHash: Int = 0
+
+    private val scaleFactor = if (worldScreen.portraitLayout) portraitScaleFactor else classicScaleFactor
+    private val inverseScaleFactor = 1f / scaleFactor
+    private val maxWidthOfStage = if (worldScreen.portraitLayout) portraitMaxWidthOfStage else classicMaxWidthOfStage
 
     private var notificationsTable = Table()
     private var topSpacerCell: Cell<Actor?>? = null

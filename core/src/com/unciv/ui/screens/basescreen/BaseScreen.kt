@@ -58,7 +58,11 @@ abstract class BaseScreen : Screen {
 
     init {
         val screenSize = game.settings.screenSize
-        val height = screenSize.virtualHeight
+        // Portrait phone layout: 30% fewer virtual units across the screen, so text and icons render ~40% larger
+        // (Small = 600 -> 420 units wide, which is the scale the mobile mockups were drawn at)
+        val screenIsPortrait = Gdx.graphics.height > Gdx.graphics.width
+        val height = if (game.settings.usePortraitLayout(screenIsPortrait)) screenSize.virtualHeight * 0.7f
+            else screenSize.virtualHeight
 
         /** The ExtendViewport sets the _minimum_(!) world size - the actual world size will be larger, fitted to screen/window aspect ratio. */
         stage = UncivStage(ExtendViewport(height, height))

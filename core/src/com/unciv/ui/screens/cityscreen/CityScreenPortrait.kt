@@ -21,6 +21,10 @@ import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
 import com.unciv.ui.popups.CityScreenConstructionMenu
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.objectdescriptions.TileDescription
+import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
+import com.unciv.ui.screens.civilopediascreen.FormattedLine.IconDisplay
+import com.unciv.ui.components.extensions.disable
 
 /**
  *  Phone layout of the [CityScreen]: header (back, name, growth, city paging), a stats row,
@@ -316,9 +320,67 @@ class CityScreenPortrait(
                 .width(screenStage.width - 32f).padTop(20f).row()
             return
         }
-        tileTable.update(tile)
-        tileTable.background = null  // the classic white frame clashes with the dark panel
-        content.add(tileTable).center().row()
+        // Description (terrain, features, resource, improvement...) as a full-width card
+        val card = rowTable()
+        card.pad(10f, 12f, 10f, 12f)
+        val markup = TileDescription.toMarkup(tile, cityView.viewingCiv(), hideUnits = cityScreen.isSpying,
+            spyCity = if (cityScreen.isSpying) cityView else null)
+        card.add(MarkupRenderer.render(markup, screenStage.width - 60f, iconDisplay = IconDisplay.NoLink) { cityScreen.openCivilopedia(it) })
+            .growX().left().row()
+        content.add(card).padTop(4f).row()
+
+        // Yields as large chips
+        val stats = tile.getTileStats(cityView.viewingCiv(), cityView)
+        val chips = Table()
+        chips.defaults().pad(4f)
+        for ((stat, value) in stats) {
+            if (value == 0f) continue
+            val chip = Table()
+            chip.background = BaseScreen.skinStrings.getUiBackground("CityScreen/Portrait/Chip", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, rowColor)
+            chip.pad(6f, 10f, 6f, 10f)
+            chip.add(ImageGetter.getStatIcon(stat.name)).size(24f).padRight(6f)
+            chip.add(value.toInt().tr().toLabel(fontSize = 20))
+            chips.add(chip)
+        }
+        if (chips.hasChildren()) content.add(chips).left().padTop(6f).row()
+
+        // Ownership and work status
+        val owner = tile.owningCity()
+        val worked = cityView.isWorked(tile)
+        val status = when {
+            owner == null -> "Not owned by any city".tr()
+            worked -> "Worked by [${owner.name}]".tr()
+            else -> "Owned by [${owner.name}]".tr()
+        }
+        content.add(status.toLabel(fontSize = 15, fontColor = Color.LIGHT_GRAY).apply { wrap = true }).width(screenStage.width - 32f).left().padTop(6f).row()
+
+        // Actions, full width
+        val actions = Table()
+        actions.defaults().growX().minHeight(48f).pad(3f)
+        if (cityView.canBuyTile(tile)) {
+            val cost = cityView.getGoldCostOfTile(tile)
+            val buyButton = Button(BaseScreen.skin)
+            buyButton.add(ImageGetter.getStatIcon("Gold")).size(20f).padRight(6f)
+            buyButton.add("Buy for [$cost] gold".tr().toLabel(fontSize = 16))
+            if (cityScreen.canChangeState && cityView.viewingCiv().hasStatToBuy(Stat.Gold, cost))
+                buyButton.onClick { cityScreen.askToBuyTile(tile) }
+            else buyButton.disable()
+            actions.add(buyButton).row()
+        }
+        if (worked && cityScreen.canChangeState) {
+            val locked = tile.isLocked()
+            val lockButton = Button(BaseScreen.skin)
+            lockButton.add(ImageGetter.getImage("OtherIcons/LockSmall")).size(20f).padRight(6f)
+            lockButton.add((if (locked) "Unlock" else "Lock").tr().toLabel(fontSize = 16))
+            lockButton.onClick {
+                if (locked) cityView.tryUnlockTile(tile) else cityView.tryLockTile(tile)
+                cityScreen.updateAsync()
+            }
+            actions.add(lockButton).row()
+        }
+        if (actions.hasChildren()) content.add(actions).growX().padTop(8f).row()
+        content.add("Tap a worked tile on the map to free it, an unworked one to assign a citizen".toLabel(fontSize = 14, fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) })
+            .width(screenStage.width - 32f).padTop(10f).row()
     }
 
     private fun updateCitizensContent() {

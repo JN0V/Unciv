@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.SplitPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup
 import com.unciv.Constants
+import com.unciv.UncivGame
 import com.unciv.GUI
 import com.unciv.ui.images.IconTextButton
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -47,18 +48,26 @@ class PickerPane(
     val splitPane = SplitPane(scrollPane, bottomTable, true, BaseScreen.skin)
 
     init {
-        bottomTable.add(closeButton).pad(10f)
-
         descriptionLabel.wrap = true
         val descriptionWithPad = Table()
         descriptionWithPad.add(descriptionLabel).pad(10f).grow()
         descriptionScroll = AutoScrollPane(descriptionWithPad, BaseScreen.skin)
-        bottomTable.add(descriptionScroll).grow()
 
         rightSideButton.disable()
         rightSideGroup.addActor(rightSideButton)
 
-        bottomTable.add(rightSideGroup).pad(10f).right()
+        val portrait = com.badlogic.gdx.Gdx.graphics.height > com.badlogic.gdx.Gdx.graphics.width
+            && UncivGame.Current.settings.usePortraitLayout(true)
+        if (portrait) {
+            // Phone: description on its own full-width row, buttons below it
+            bottomTable.add(descriptionScroll).colspan(2).grow().row()
+            bottomTable.add(closeButton).pad(6f, 10f, 10f, 10f).left()
+            bottomTable.add(rightSideGroup).pad(6f, 10f, 10f, 10f).right()
+        } else {
+            bottomTable.add(closeButton).pad(10f)
+            bottomTable.add(descriptionScroll).grow()
+            bottomTable.add(rightSideGroup).pad(10f).right()
+        }
 
         scrollPane.setScrollingDisabled(disableScroll, disableScroll)  // lock scrollPane
         if (disableScroll) scrollPane.clearListeners()  // remove focus capture of AutoScrollPane too

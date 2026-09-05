@@ -99,14 +99,16 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         binding: KeyboardBinding,
         function: () -> Unit
     ): Table {
-        val table = Table().pad(15f, 30f, 15f, 30f)
+        // Phone portrait layout renders larger units: keep the eight buttons on one screen
+        val compact = game.settings.usePortraitLayout(isPortrait())
+        val table = if (compact) Table().pad(8f, 20f, 8f, 20f) else Table().pad(15f, 30f, 15f, 30f)
         table.background = skinStrings.getUiBackground(
             "MainMenuScreen/MenuButton",
             skinStrings.roundedEdgeRectangleShape,
             skinStrings.skinConfig.baseColor
         )
-        table.add(ImageGetter.getImage(icon)).size(50f).padRight(20f)
-        table.add(text.toLabel(fontSize = 30, alignment = Align.left)).expand().left().minWidth(200f)
+        table.add(ImageGetter.getImage(icon)).size(if (compact) 34f else 50f).padRight(if (compact) 14f else 20f)
+        table.add(text.toLabel(fontSize = if (compact) 22 else 30, alignment = Align.left)).expand().left().minWidth(if (compact) 150f else 200f)
             .padTopDescent()
 
         table.touchable = Touchable.enabled
@@ -148,8 +150,9 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         if (game.settings.tileSet in TileSetCache)
             startBackgroundMapGeneration()
 
-        val column1 = Table().apply { defaults().pad(10f).fillX() }
-        val column2 = if (singleColumn) column1 else Table().apply { defaults().pad(10f).fillX() }
+        val columnPad = if (game.settings.usePortraitLayout(isPortrait())) 5f else 10f
+        val column1 = Table().apply { defaults().pad(columnPad).fillX() }
+        val column2 = if (singleColumn) column1 else Table().apply { defaults().pad(columnPad).fillX() }
 
         if (game.files.autosaves.autosaveExists()) {
             val resumeTable = getMenuButton("Resume","OtherIcons/Resume", KeyboardBinding.Resume)

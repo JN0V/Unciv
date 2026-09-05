@@ -495,13 +495,19 @@ class WorldScreen(
             bottomSheet.update(bottomUnitTable.selectedUnit?.getUnit())
             minimapWrapper.y = bottomSheet.height
             bottomTileInfoTable.setPosition(6f, bottomSheet.height + 6f)
-            bottomTileInfoTable.isVisible = mapHolder.selectedTile != null  // no empty box when nothing is selected
+            // Only when the sheet has nothing better to show: a selected unit or city already describes its tile
+            bottomTileInfoTable.isVisible = mapHolder.selectedTile != null
+                && bottomUnitTable.selectedUnit == null && bottomUnitTable.selectedCity == null
             if (battleTable.isVisible) battleTable.y = bottomSheet.height + 5f
             bottomSheet.height
         } else 0f
 
-        val coveredNotificationsTop = stage.height - statusButtons.y
-        val coveredNotificationsBottom = if (bottomSheet != null) bottomOffset + bottomTileInfoTable.height + 5f
+        val coveredNotificationsTop = if (bottomSheet != null) {
+            // Portrait: start below the tech/policy buttons and the tutorial card
+            val lowest = minOf(techPolicyAndDiplomacy.y, if (tutorialTaskTable.isVisible) tutorialTaskTable.y else stage.height)
+            stage.height - lowest + 5f
+        } else stage.height - statusButtons.y
+        val coveredNotificationsBottom = if (bottomSheet != null) bottomOffset + (if (bottomTileInfoTable.isVisible) bottomTileInfoTable.height + 5f else 0f)
             else (bottomTileInfoTable.height + bottomTileInfoTable.y)
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
