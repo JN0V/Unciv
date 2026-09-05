@@ -204,6 +204,11 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
 
             unitSupplyCell = add()
             add(overviewButton).pad(if (compact) 4f else 10f)
+            if (compact) {
+                // Whole table is the hit area, not just the small round button
+                touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
+                onClick { worldScreen.openEmpireOverview() }
+            }
             pack()
         }
 
@@ -244,7 +249,7 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
             selectedCivLabel.onClick(onNationClick)
             selectedCivIcon.onClick(onNationClick)
 
-            menuButtonWrapper.size(Constants.headingFontSize * 1.5f)
+            menuButtonWrapper.size(if (compact) 48f else Constants.headingFontSize * 1.5f)  // 48 units: a comfortable thumb target
             menuButtonWrapper.center()
             add(menuButtonWrapper)
 

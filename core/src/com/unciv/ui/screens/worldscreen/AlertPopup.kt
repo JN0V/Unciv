@@ -484,10 +484,19 @@ class AlertPopup(
         addGoodSizedLabel(tech.name)
         addSeparator().padBottom(SEPARATOR_LINE_TO_TEXT_PADDING)
         val centerTable = Table()
-        centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(stageWidth / 3)
-        centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
-        val descriptionScroll = ScrollPane(tech.getDescription(viewingCiv).toLabel().apply { wrap = true })
-        centerTable.add(descriptionScroll).width(stageWidth / 3).maxHeight(stageHeight / 2)
+        if (worldScreen.portraitLayout) {
+            // One column: icon, quote, then the (scrollable) description at readable width
+            val textWidth = stageWidth * 0.78f
+            centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 80f)).pad(10f).row()
+            centerTable.add(tech.quote.toLabel(fontSize = 15, fontColor = com.badlogic.gdx.graphics.Color.LIGHT_GRAY).apply { wrap = true }).width(textWidth).padBottom(10f).row()
+            val descriptionScroll = ScrollPane(tech.getDescription(viewingCiv).toLabel().apply { wrap = true })
+            centerTable.add(descriptionScroll).width(textWidth).maxHeight(stageHeight * 0.4f)
+        } else {
+            centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(stageWidth / 3)
+            centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
+            val descriptionScroll = ScrollPane(tech.getDescription(viewingCiv).toLabel().apply { wrap = true })
+            centerTable.add(descriptionScroll).width(stageWidth / 3).maxHeight(stageHeight / 2)
+        }
         add(centerTable).row()
         addCloseButton()
         music.chooseTrack(tech.name, MusicMood.Researched, MusicTrackChooserFlags.setSpecific)

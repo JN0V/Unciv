@@ -80,7 +80,11 @@ class NextTurnButton(
             val downDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButtonPressed", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint.cpy().lerp(Color.BLACK, 0.3f))
             // (locals deliberately not named up/down: inside apply{} the style's own members would shadow them)
             style = ButtonStyle(style).apply { up = upDrawable; down = downDrawable; over = upDrawable; disabled = downDrawable; checked = upDrawable }
-            label.setFontSize(22)
+            // Long action names ("Pick construction", "Waiting for other players...") must still fit the sheet
+            val text = nextTurnAction.getText(worldScreen).tr()
+            label.setFontSize(if (text.length > 16) 17 else 22)
+            label.setEllipsis("…")
+            labelCell.width(minOf(label.prefWidth, worldScreen.stage.width - 215f)).minWidth(0f)
         }
         if (nextTurnAction.icon != null && ImageGetter.imageExists(nextTurnAction.icon!!))
             iconCell.setActor(ImageGetter.getImage(nextTurnAction.icon).apply {

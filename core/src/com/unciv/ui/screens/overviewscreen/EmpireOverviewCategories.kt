@@ -20,7 +20,8 @@ enum class EmpireOverviewCategories(
 ) {
     Cities("OtherIcons/Cities", 'C', Align.topLeft) {
         override fun createTab(viewingPlayer: CivView, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?) =
-                CityOverviewTab(viewingPlayer, overviewScreen, persistedData)
+                if (overviewScreen.portraitLayout) CityCardsOverviewTab(viewingPlayer, overviewScreen, persistedData)
+                else CityOverviewTab(viewingPlayer, overviewScreen, persistedData)
         override fun showDisabled(viewingPlayer: CivView) = viewingPlayer.getCiv().cities.isEmpty()
         override fun getPersistDataClass() = CityOverviewTab.CityTabPersistableData::class.java
     },

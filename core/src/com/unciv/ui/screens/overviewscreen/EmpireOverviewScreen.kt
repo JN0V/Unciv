@@ -22,6 +22,8 @@ class EmpireOverviewScreen(
     // Since a resize recreates this screen this should be fine as a val
     internal val centerAreaHeight = stage.height - 82f
 
+    /** Phone layout: card lists instead of wide grids where implemented */
+    val portraitLayout = game.settings.usePortraitLayout(isPortrait())
     private val tabbedPager: TabbedPager
     private val pageObjects = HashMap<EmpireOverviewCategories, EmpireOverviewTab>()
 

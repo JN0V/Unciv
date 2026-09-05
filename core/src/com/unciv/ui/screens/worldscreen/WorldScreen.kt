@@ -835,6 +835,14 @@ class WorldScreen(
 
     /** Development aid (see [BaseScreen.debugScreenshotIfRequested]): env UNCIV_DEBUG_ACTION picks what to do before the capture */
     override fun debugAction(action: String) {
+        if (action.startsWith("hit:")) {
+            val (x, y) = action.removePrefix("hit:").split(",").map { it.toFloat() }
+            var actor = stage.hit(x, y, true)
+            val chain = ArrayList<String>()
+            while (actor != null) { chain.add(actor.javaClass.simpleName + "@" + actor.name); actor = actor.parent }
+            println("DEBUG hit($x,$y): " + chain.joinToString(" < "))
+            println("DEBUG topBar bounds: x=${topBar.x} y=${topBar.y} w=${topBar.width} h=${topBar.height} stage=${stage.width}x${stage.height}")
+        }
         when (action) {
             "more" -> bottomSheet?.openMoreMenu()
             "city" -> viewingCiv.cities.firstOrNull()?.let { city ->

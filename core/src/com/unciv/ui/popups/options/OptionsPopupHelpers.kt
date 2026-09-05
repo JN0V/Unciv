@@ -94,6 +94,12 @@ internal interface OptionsPopupHelpers {
             val worldScreen = GUI.getWorldScreenIfActive()
             if (updateWorld && worldScreen != null) worldScreen.shouldUpdate = true
         }
+        // Phone: long option names wrap instead of running off the popup
+        val screen = UncivGame.Current.screen as? BaseScreen
+        if (screen != null && UncivGame.Current.settings.usePortraitLayout(screen.isPortrait())) {
+            checkbox.label.wrap = true
+            checkbox.labelCell.width(screen.stage.width * 0.7f).minWidth(0f)
+        }
         if (newRow) add(checkbox).colspan(2).left().row()
         else add(checkbox).left()
     }

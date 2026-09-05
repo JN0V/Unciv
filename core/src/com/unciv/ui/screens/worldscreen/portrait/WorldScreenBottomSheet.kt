@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.models.UnitAction
+import com.unciv.models.translations.tr
 import com.unciv.models.UnitActionType
 import com.unciv.models.UpgradeUnitAction
 import com.unciv.ui.components.extensions.brighten
@@ -54,7 +55,7 @@ class WorldScreenBottomSheet(
     private val statusRow = Table()
     private val minimapToggle = Button(BaseScreen.skin)
     /** Cycles idle units; kept separate from the next turn button so that one never changes meaning */
-    private val nextUnitButton = IconTextButton("Next unit", ImageGetter.getImage("OtherIcons/Skip"), actionFontSize)
+    private val nextUnitButton = IconTextButton("", ImageGetter.getImage("OtherIcons/Skip"), actionFontSize)
     private val nextUnitCell: com.badlogic.gdx.scenes.scene2d.ui.Cell<*>
     private var openMore: (() -> Unit)? = null
     private var shownForUnitHash = 0
@@ -109,6 +110,8 @@ class WorldScreenBottomSheet(
 
         val dueUnits = worldScreen.selectedGameView.civView.hasIdleUnits() && worldScreen.canChangeState
         nextUnitButton.isVisible = dueUnits
+        // Icon + count keeps the row narrow; the next turn button carries the long text
+        nextUnitButton.label.setText(worldScreen.selectedGameView.civView.getCiv().units.getIdleUnits().count().tr())
         if (dueUnits) nextUnitCell.setActor(nextUnitButton).padLeft(6f) else nextUnitCell.setActor(null).padLeft(0f).width(0f)
         nextTurnButton.pack()
         invalidateHierarchy()
