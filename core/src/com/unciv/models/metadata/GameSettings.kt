@@ -34,7 +34,7 @@ class GameSettings {
     //// Screen
     var screenSize: ScreenSize = ScreenSize.Small
     /** Orientation for mobile platforms */
-    var displayOrientation = ScreenOrientation.Landscape
+    var displayOrientation = ScreenOrientation.Auto
     var screenMode = 0
     /** Allows panning the map by moving the pointer to the screen edges */
     var mapAutoScroll = false
