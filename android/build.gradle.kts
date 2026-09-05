@@ -33,6 +33,7 @@ android {
         targetSdk = 36
         versionCode = BuildConfig.appCodeNumber
         versionName = BuildConfig.appVersion
+        manifestPlaceholders["appLabel"] = "@string/app_name"
 
         base.archivesName.set("Unciv")
     }
@@ -52,6 +53,10 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            // Coexist with the store/F-Droid build (different signature) on the same device
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-portrait"
+            manifestPlaceholders["appLabel"] = "Unciv Dev"
         }
         release {
             // If you make this true you get a version of the game that just flat-out doesn't run
