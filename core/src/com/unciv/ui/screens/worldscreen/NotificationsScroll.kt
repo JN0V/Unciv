@@ -51,7 +51,7 @@ class NotificationsScroll(
     private companion object {
         /** Scale the entire ScrollPane by this factor (classic layout; portrait uses [NotificationsScroll.scaleFactor]) */
         const val classicScaleFactor = 0.5f
-        const val portraitScaleFactor = 0.8f
+        const val portraitScaleFactor = 0.62f
         /** Limit width by wrapping labels to this percentage of the stage (classic; portrait uses [NotificationsScroll.maxWidthOfStage]) */
         const val classicMaxWidthOfStage = 0.333f
         const val portraitMaxWidthOfStage = 0.9f
@@ -175,7 +175,7 @@ class NotificationsScroll(
             return
         }
 
-        enlargeHighlight = GUI.getSettings().enlargeSelectedNotification
+        enlargeHighlight = GUI.getSettings().enlargeSelectedNotification && !worldScreen.portraitLayout
 
         // Remember scroll position _relative to topRight_
         val previousScrollXinv = when {

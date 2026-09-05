@@ -1,5 +1,9 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.badlogic.gdx.graphics.Color
+
+import com.unciv.ui.images.ImageGetter
+
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.logic.map.mapunit.MapUnit
@@ -22,10 +26,11 @@ class RenderEvent(
     event: Event,
     val worldScreen: WorldScreen,
     val unit: MapUnit? = null,
-    /** Phone layout: no illustration, wider text, so a floating tutorial task stays a small card */
-    val compact: Boolean = false,
+    val mode: Mode = Mode.Classic,
     val onChoice: (EventChoice) -> Unit
 ) : Table() {
+    /** [Compact]: title line only (floating card on a phone). [Popup]: full text and images, wide. */
+    enum class Mode { Classic, Compact, Popup }
     private val gameInfo get() = worldScreen.gameInfo
     private val stageWidth get() = worldScreen.stage.width
 
@@ -40,7 +45,11 @@ class RenderEvent(
         val choices = event.getMatchingChoices(gameContext)
         isValid = choices != null
         if (isValid) {
-            val textWidth = if (compact) stageWidth * 0.8f else stageWidth * 0.5f
+            val textWidth = when (mode) {
+                Mode.Classic -> stageWidth * 0.5f
+                Mode.Compact -> stageWidth * 0.8f
+                Mode.Popup -> stageWidth * 0.78f
+            }
             if (event.text.isNotEmpty()) {
                 add(WrappableLabel(event.text, textWidth).apply {
                     wrap = true
@@ -49,9 +58,13 @@ class RenderEvent(
                 }).row()
             }
             if (event.civilopediaText.isNotEmpty()) {
-                if (compact) {
-                    val lines = event.civilopediaText.filter { it.extraImage.isEmpty() }
-                    add(MarkupRenderer.render(lines, textWidth, linkAction = ::openCivilopedia)).row()
+                if (mode == Mode.Compact) {
+                    // Title only, the full help opens on tap (see WorldScreen)
+                    val lines = event.civilopediaText.filter { it.extraImage.isEmpty() && it.text.isNotEmpty() }.take(1)
+                    val row = Table()
+                    row.add(MarkupRenderer.render(lines, textWidth - 40f, linkAction = ::openCivilopedia)).growX()
+                    row.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(18f).padLeft(8f)
+                    add(row).growX().row()
                 } else
                     add(event.renderCivilopediaText(textWidth, ::openCivilopedia)).row()
             }

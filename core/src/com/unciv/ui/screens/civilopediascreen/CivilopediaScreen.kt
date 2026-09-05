@@ -76,6 +76,10 @@ class CivilopediaScreen(
     private val buttonTableScroll: ScrollPane
 
     private val entrySelectTable = Table().apply { defaults().pad(6f).left() }
+    /** Phone layout: list and article alternate in one column instead of sitting side by side */
+    private val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+    private val portraitHolder = Table()
+    private var portraitDescriptionScroll: ScrollPane? = null
     private val entrySelectScroll: ScrollPane
     private val flavourTable = Table()
 
@@ -120,6 +124,7 @@ class CivilopediaScreen(
         entrySelectTable.clear()
         entryIndex.clear()
         flavourTable.clear()
+        if (portraitLayout) showPortraitList()
 
         for (button in categoryToButtons.values) button.button.color = Color.WHITE
         val buttonInfo = categoryToButtons[category]
@@ -204,13 +209,29 @@ class CivilopediaScreen(
             flavourTable.isVisible = true
             flavourTable.add(
                 entry.flavour.assembleCivilopediaText(ruleset)
-                    .renderCivilopediaText(stage.width * 0.5f) { selectLink(it) })
+                    .renderCivilopediaText(if (portraitLayout) stage.width - 40f else stage.width * 0.5f) { selectLink(it) })
         } else {
             flavourTable.isVisible = false
         }
         entrySelectTable.children.forEach {
             it.color = if (it.name == entry.name) Color.BLUE else Color.WHITE
         }
+        if (portraitLayout) showPortraitDescription(entry)
+    }
+
+    private fun showPortraitList() {
+        portraitHolder.clear()
+        portraitHolder.add(entrySelectScroll).grow()
+    }
+
+    private fun showPortraitDescription(entry: CivilopediaEntry) {
+        portraitHolder.clear()
+        val backRow = Table()
+        val backButton = IconTextButton(currentCategory.label, ImageGetter.getImage("OtherIcons/BackArrow"), fontSize = 20)
+        backButton.onClick { showPortraitList() }
+        backRow.add(backButton).left().pad(6f).growX()
+        portraitHolder.add(backRow).growX().row()
+        portraitHolder.add(portraitDescriptionScroll!!).grow()
     }
     private fun selectDefaultEntry() {
         val name = ruleset.mods.asSequence()
@@ -282,11 +303,20 @@ class CivilopediaScreen(
         entrySelectScroll.setOverscroll(false, false)
         val descriptionTable = Table()
         descriptionTable.add(flavourTable).padTop(7f).padBottom(5f).row()  // 2f of that 7f is used up by Portrait painting e.g. a Nation's outer border *outside its bounds*
-        val entrySplitPane = SplitPane(entrySelectScroll, ScrollPane(descriptionTable), false, skin)
-        entrySplitPane.splitAmount = 0.3f
-        entryTable.addActor(entrySplitPane)
-        entrySplitPane.setFillParent(true)
-        entrySplitPane.pack()  // ensure selectEntry has correct entrySelectScroll.height and maxY
+        if (portraitLayout) {
+            portraitDescriptionScroll = ScrollPane(descriptionTable)
+            portraitHolder.setFillParent(true)
+            portraitHolder.clip = true
+            entryTable.addActor(portraitHolder)
+            showPortraitList()
+            portraitHolder.pack()
+        } else {
+            val entrySplitPane = SplitPane(entrySelectScroll, ScrollPane(descriptionTable), false, skin)
+            entrySplitPane.splitAmount = 0.3f
+            entryTable.addActor(entrySplitPane)
+            entrySplitPane.setFillParent(true)
+            entrySplitPane.pack()  // ensure selectEntry has correct entrySelectScroll.height and maxY
+        }
 
         if (link.isEmpty() || '/' !in link)
             selectCategory(category)

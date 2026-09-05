@@ -503,9 +503,10 @@ class WorldScreen(
         } else 0f
 
         val coveredNotificationsTop = if (bottomSheet != null) {
-            // Portrait: start below the tech/policy buttons and the tutorial card
+            // Portrait: a band of at most a third of the screen, right above the sheet, so the map stays visible
             val lowest = minOf(techPolicyAndDiplomacy.y, if (tutorialTaskTable.isVisible) tutorialTaskTable.y else stage.height)
-            stage.height - lowest + 5f
+            val bandTop = bottomOffset + stage.height * 0.32f
+            stage.height - minOf(lowest - 5f, bandTop)
         } else stage.height - statusButtons.y
         val coveredNotificationsBottom = if (bottomSheet != null) bottomOffset + (if (bottomTileInfoTable.isVisible) bottomTileInfoTable.height + 5f else 0f)
             else (bottomTileInfoTable.height + bottomTileInfoTable.y)
@@ -569,7 +570,7 @@ class WorldScreen(
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
             val hash = tutorialTask.hashCode()  // Default implementation is OK - we see the same instance or not
             if (hash != tutorialTaskTableHash) {
-                val renderEvent = RenderEvent(tutorialTask, this, compact = portraitLayout) {
+                val renderEvent = RenderEvent(tutorialTask, this, mode = if (portraitLayout) RenderEvent.Mode.Compact else RenderEvent.Mode.Classic) {
                     shouldUpdate = true
                 }
                 if (!renderEvent.isValid) return setInvisible()
@@ -586,8 +587,16 @@ class WorldScreen(
         tutorialTaskTable.centerX(stage)
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
         tutorialTaskTable.onClick {
-            UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
-            displayTutorialTaskOnUpdate()
+            if (portraitLayout && !UncivGame.Current.isTutorialTaskCollapsed) {
+                // Phone: the card only shows the title, the full help (with illustration) opens as a popup
+                val popup = Popup(this)
+                popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); shouldUpdate = true }).row()
+                popup.addCloseButton()
+                popup.open()
+            } else {
+                UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
+                displayTutorialTaskOnUpdate()
+            }
         }
         tutorialTaskTable.isVisible = true
     }
