@@ -682,7 +682,8 @@ class AlertPopup(
         
         
         val event = gameInfo.ruleset.events[eventName] ?: return false
-        val render = RenderEvent(event, worldScreen, unit) { close() }
+        val render = RenderEvent(event, worldScreen, unit,
+            mode = if (worldScreen.portraitLayout) RenderEvent.Mode.Popup else RenderEvent.Mode.Classic) { close() }
         if (!render.isValid) return false
         add(render).pad(0f).row()
         return true

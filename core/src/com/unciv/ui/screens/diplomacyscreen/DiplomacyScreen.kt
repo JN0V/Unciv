@@ -147,6 +147,12 @@ class DiplomacyScreen(
 
     private fun showPortraitList() {
         portraitHolder.clear()
+        val title = Table()
+        title.add("Diplomacy".toLabel(fontSize = 22)).left().pad(12f, 16f, 6f, 16f)
+        title.add().growX()
+        title.add().width(closeButtonSize + 2 * closeButtonPad)  // keep clear of the floating close button
+        portraitHolder.add(title).growX().row()
+        leftSideTable.top()
         portraitHolder.add(leftSideScroll).grow()
         leftSideScroll.scrollPercentX = 0.5f
     }
@@ -248,10 +254,10 @@ class DiplomacyScreen(
         rightSideTable.clear()
         UncivGame.Current.musicController.chooseTrack(otherCiv.civName,
             MusicMood.peaceOrWar(viewingCiv.isAtWarWith(otherCiv)),MusicTrackChooserFlags.setSelectNation)
-        rightSideTable.add(ScrollPane(
-            if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
+        val content = if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        )).height(if (portraitLayout) stage.height - 70f else stage.height)
+        if (portraitLayout) { content.top(); rightSideTable.top() }  // start at the top, not floating mid-screen
+        rightSideTable.add(ScrollPane(content)).height(if (portraitLayout) stage.height - 70f else stage.height)
         if (portraitLayout) showPortraitDetail(otherCiv)
     }
 
