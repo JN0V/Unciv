@@ -85,8 +85,14 @@ abstract class LoadOrSaveScreen(
 
         updateShownSaves(showAutosavesCheckbox.isChecked)
 
-        topTable.add(savesScrollPane)
-        topTable.add(rightSideTable)
+        if (game.settings.usePortraitLayout(isPortrait())) {
+            // Phone: the file list above the actions, both full width
+            topTable.add(savesScrollPane).growX().height(stage.height * 0.38f).row()
+            topTable.add(rightSideTable).growX()
+        } else {
+            topTable.add(savesScrollPane)
+            topTable.add(rightSideTable)
+        }
         topTable.pack()
     }
 

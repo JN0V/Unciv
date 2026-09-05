@@ -194,8 +194,10 @@ class PolicyPickerScreen(
         // estimate how many branch boxes fit using average size (including pad)
         // TODO If we'd want to use scene2d correctly, this is supposed to happen inside an overridden layout() method
         val numBranchesY = scrollPane.height / 305f
+        val portraitLayout = game.settings.usePortraitLayout(isPortrait())
             // Landscape - arrange in as few rows as looks nice
-        branchesPerRow = if (numBranchesY > 1.5f) {
+        branchesPerRow = if (portraitLayout) 1  // Phone: one branch per row, scroll vertically
+        else if (numBranchesY > 1.5f) {
             val numRows = if (numBranchesY < 2.9f) 2 else (numBranchesY + 0.1f).toInt()
             (branches.size + numRows - 1) / numRows
         } else branches.size
