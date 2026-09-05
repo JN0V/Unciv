@@ -848,6 +848,13 @@ class WorldScreen(
             "city" -> viewingCiv.cities.firstOrNull()?.let { city ->
                 game.pushScreen { CityScreen(selectedGameView.getCityView(city)) }
             }
+            "diplomacy" -> game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView) }
+            "diplomacy-detail" -> viewingCiv.diplomacyFunctions.getKnownCivsSorted().firstOrNull()?.let { other ->
+                game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView, selectedGameView.getForeignCivView(other)) }
+            }
+            "policies" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.PolicyPickerScreen(selectedCiv, canChangeState) }
+            "tech" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.TechPickerScreen(selectedCiv) }
+            "overview" -> openEmpireOverview()
         }
     }
 

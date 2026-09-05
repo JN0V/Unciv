@@ -103,6 +103,7 @@ abstract class BaseScreen : Screen {
     private fun debugScreenshotIfRequested() {
         val path = System.getenv("UNCIV_DEBUG_SCREENSHOT") ?: return
         debugFramesRendered++
+        Gdx.graphics.requestRendering()  // the game renders on demand; keep frames coming for the capture
         if (debugFramesRendered == 20) System.getenv("UNCIV_DEBUG_ACTION")?.let { debugAction(it) }
         val targetScreen = System.getenv("UNCIV_DEBUG_SCREEN") ?: "WorldScreen"  // which screen class to capture
         if (javaClass.simpleName != targetScreen || debugFramesRendered < 60) return

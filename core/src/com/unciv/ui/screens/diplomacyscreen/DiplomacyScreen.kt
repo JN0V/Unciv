@@ -2,6 +2,7 @@ package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.SplitPane
+import com.unciv.ui.images.IconTextButton
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -81,6 +82,10 @@ class DiplomacyScreen(
 
     private val splitPane = SplitPaneCenteringLeftSide()
 
+    /** Phone layout: civ list and detail alternate in one column instead of a split pane */
+    private val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+    private val portraitHolder = Table()
+
     private val closeButton = getCloseButton(closeButtonSize) { game.popScreen() }
 
     internal fun isNotPlayersTurn() = !GUI.isAllowedChangeState()
@@ -92,8 +97,14 @@ class DiplomacyScreen(
 
         updateLeftSideTable(selectCiv)
 
-        splitPane.setFillParent(true)
-        stage.addActor(splitPane)
+        if (portraitLayout) {
+            portraitHolder.setFillParent(true)
+            stage.addActor(portraitHolder)
+            showPortraitList()
+        } else {
+            splitPane.setFillParent(true)
+            stage.addActor(splitPane)
+        }
 
         positionCloseButton()
         stage.addActor(closeButton) // This must come after the split pane so it will be above, that the button will be clickable
@@ -132,6 +143,23 @@ class DiplomacyScreen(
             lastSplitAmount = splitAmount
             leftSideScroll.scrollPercentX = 0.5f
         }
+    }
+
+    private fun showPortraitList() {
+        portraitHolder.clear()
+        portraitHolder.add(leftSideScroll).grow()
+        leftSideScroll.scrollPercentX = 0.5f
+    }
+
+    private fun showPortraitDetail(otherCiv: Civilization) {
+        portraitHolder.clear()
+        val backRow = Table()
+        val backButton = IconTextButton(otherCiv.civName, ImageGetter.getImage("OtherIcons/BackArrow"), fontSize = 20)
+        backButton.onClick { showPortraitList() }
+        backRow.add(backButton).left().pad(6f).growX()
+        backRow.add().width(closeButtonSize + 2 * closeButtonPad)  // keep clear of the floating close button
+        portraitHolder.add(backRow).growX().row()
+        portraitHolder.add(rightSideTable).grow()
     }
 
     private fun positionCloseButton() {
@@ -223,7 +251,8 @@ class DiplomacyScreen(
         rightSideTable.add(ScrollPane(
             if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        )).height(stage.height)
+        )).height(if (portraitLayout) stage.height - 70f else stage.height)
+        if (portraitLayout) showPortraitDetail(otherCiv)
     }
 
     //region Major Civ Diplomacy
@@ -232,6 +261,7 @@ class DiplomacyScreen(
         rightSideTable.clear()
         val tradeTable = TradeTable(viewingCivView, viewingCivView.gameView.getForeignCivView(otherCiv), this)
         rightSideTable.add(tradeTable)
+        if (portraitLayout) showPortraitDetail(otherCiv)
         return tradeTable
     }
 
