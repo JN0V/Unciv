@@ -22,6 +22,8 @@ class RenderEvent(
     event: Event,
     val worldScreen: WorldScreen,
     val unit: MapUnit? = null,
+    /** Phone layout: no illustration, wider text, so a floating tutorial task stays a small card */
+    val compact: Boolean = false,
     val onChoice: (EventChoice) -> Unit
 ) : Table() {
     private val gameInfo get() = worldScreen.gameInfo
@@ -38,15 +40,20 @@ class RenderEvent(
         val choices = event.getMatchingChoices(gameContext)
         isValid = choices != null
         if (isValid) {
+            val textWidth = if (compact) stageWidth * 0.8f else stageWidth * 0.5f
             if (event.text.isNotEmpty()) {
-                add(WrappableLabel(event.text, stageWidth * 0.5f).apply {
+                add(WrappableLabel(event.text, textWidth).apply {
                     wrap = true
                     setAlignment(Align.center)
                     optimizePrefWidth()
                 }).row()
             }
             if (event.civilopediaText.isNotEmpty()) {
-                add(event.renderCivilopediaText(stageWidth * 0.5f, ::openCivilopedia)).row()
+                if (compact) {
+                    val lines = event.civilopediaText.filter { it.extraImage.isEmpty() }
+                    add(MarkupRenderer.render(lines, textWidth, linkAction = ::openCivilopedia)).row()
+                } else
+                    add(event.renderCivilopediaText(textWidth, ::openCivilopedia)).row()
             }
 
             for (choice in choices!!) addChoice(choice)

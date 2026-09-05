@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Container
 import com.badlogic.gdx.scenes.scene2d.ui.Table
@@ -66,8 +67,9 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
 
     private val statsTable = WorldScreenTopBarStats(this)
     private val resourceTable = WorldScreenTopBarResources(this)
-    private val selectedCivTable = SelectedCivilizationTable(worldScreen)
-    private val overviewButton = OverviewAndSupplyTable(worldScreen)
+    private val compact = worldScreen.portraitLayout
+    private val selectedCivTable = SelectedCivilizationTable(worldScreen, compact)
+    private val overviewButton = OverviewAndSupplyTable(worldScreen, compact)
     private val leftFiller: BackgroundActor
     private val rightFiller: BackgroundActor
     private var baseHeight = 0f
@@ -106,8 +108,27 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
 
     internal fun getYForTutorialTask(): Float = y + height - baseHeight
 
+    /** Phone layout: two plain rows, no overlay tricks. Row 1 = menu + civ icon + stats, row 2 = turn/year + resources + overview. */
+    private fun updatePortraitLayout() {
+        val targetWidth = stage.width
+        clear()
+        // Row 1: the stats alone, scaled to the full width. Row 2: menu + civ icon | turn, year, resources | overview
+        val civWidth = selectedCivTable.minWidth
+        val overviewWidth = overviewButton.minWidth
+        resourceTable.scaleTo(targetWidth - civWidth - overviewWidth - 4f)
+        add(statsTable).growX().colspan(3).width(targetWidth).row()
+        add(selectedCivTable).left()
+        add(resourceTable).growX()
+        add(overviewButton).right()
+        layout()
+        baseHeight = prefHeight
+        setSize(targetWidth, prefHeight)
+        setPosition(0f, stage.height - prefHeight)
+    }
+
     /** Performs the layout tricks mentioned in the class Kdoc */
     private fun updateLayout() {
+        if (compact) return updatePortraitLayout()
         val targetWidth = stage.width
         val statsWidth = statsTable.prefWidth
         val resourceWidth = resourceTable.prefWidth
@@ -164,7 +185,7 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
         addActor(overviewButton)
     }
 
-    private class OverviewAndSupplyTable(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
+    private class OverviewAndSupplyTable(worldScreen: WorldScreen, compact: Boolean) : Table(BaseScreen.skin) {
         val unitSupplyImage = ImageGetter.getImage("OtherIcons/ExclamationMark")
             .apply { color = Color.FIREBRICK }
         val unitSupplyCell: Cell<Actor?>
@@ -174,13 +195,15 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
                 worldScreen.openEmpireOverview(EmpireOverviewCategories.Units)
             }
 
-            val overviewButton = "Overview".toTextButton()
+            val overviewButton = if (compact) Button(BaseScreen.skin).apply {
+                add(ImageGetter.getImage("OtherIcons/Cities")).size(22f).pad(6f)
+            } else "Overview".toTextButton()
             overviewButton.onActivation(binding = KeyboardBinding.EmpireOverview) {
                 worldScreen.openEmpireOverview()
             }
 
             unitSupplyCell = add()
-            add(overviewButton).pad(10f)
+            add(overviewButton).pad(if (compact) 4f else 10f)
             pack()
         }
 
@@ -195,7 +218,7 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
         }
     }
 
-    private class SelectedCivilizationTable(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
+    private class SelectedCivilizationTable(worldScreen: WorldScreen, private val compact: Boolean) : Table(BaseScreen.skin) {
         private var selectedCiv = ""
         // Instead of allowing tr() to insert the nation icon - we don't want it scaled with fontSizeMultiplier
         private var selectedCivIcon = Group()
@@ -207,7 +230,7 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
 
         init {
             left()
-            pad(10f)
+            pad(if (compact) 6f else 10f)
 
             menuButton.color = Color.WHITE
             menuButton.onActivation(binding = KeyboardBinding.Menu) { WorldScreenMenuPopup(worldScreen) }
@@ -226,8 +249,9 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
             add(menuButtonWrapper)
 
             selectedCivIconCell = add(selectedCivIcon).padLeft(Constants.defaultFontSize / 1.5f)
-            add(selectedCivLabel).padTop(10f - Fonts.getDescenderHeight(Constants.headingFontSize))
-                .padLeft(Constants.defaultFontSize / 2.0f)
+            if (!compact)  // On a phone the nation icon alone identifies the civ; the name costs a third of the row
+                add(selectedCivLabel).padTop(10f - Fonts.getDescenderHeight(Constants.headingFontSize))
+                    .padLeft(Constants.defaultFontSize / 2.0f)
             pack()
         }
 

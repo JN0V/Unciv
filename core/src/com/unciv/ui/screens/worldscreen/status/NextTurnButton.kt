@@ -1,12 +1,16 @@
 package com.unciv.ui.screens.worldscreen.status
 
+import com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.logic.civilization.managers.TurnManager
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.UncivTooltip.Companion.removeTooltips
+import com.badlogic.gdx.graphics.Color
+import com.unciv.ui.components.extensions.colorFromRGB
 import com.unciv.ui.components.extensions.isEnabled
+import com.unciv.ui.components.extensions.setFontSize
 import com.unciv.ui.components.extensions.setSize
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
@@ -63,11 +67,25 @@ class NextTurnButton(
 
     internal fun updateButton(nextTurnAction: NextTurnAction) {
         label.setText(nextTurnAction.getText(worldScreen).tr())
-        label.color = nextTurnAction.color
+        label.color = if (worldScreen.portraitLayout) Color.WHITE else nextTurnAction.color
+        if (worldScreen.portraitLayout) {
+            // One stable, green "next turn" button; other states get their own tint
+            val tint = when (nextTurnAction) {
+                NextTurnAction.Default, NextTurnAction.NextTurn -> colorFromRGB(31, 126, 55)
+                NextTurnAction.Working, NextTurnAction.Waiting -> colorFromRGB(37, 43, 62)
+                NextTurnAction.PickConstruction, NextTurnAction.PickTech -> colorFromRGB(57, 152, 219)
+                else -> nextTurnAction.color.cpy().lerp(Color.BLACK, 0.5f)
+            }
+            val upDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint)
+            val downDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButtonPressed", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint.cpy().lerp(Color.BLACK, 0.3f))
+            // (locals deliberately not named up/down: inside apply{} the style's own members would shadow them)
+            style = ButtonStyle(style).apply { up = upDrawable; down = downDrawable; over = upDrawable; disabled = downDrawable; checked = upDrawable }
+            label.setFontSize(22)
+        }
         if (nextTurnAction.icon != null && ImageGetter.imageExists(nextTurnAction.icon!!))
             iconCell.setActor(ImageGetter.getImage(nextTurnAction.icon).apply {
                 setSize(30f)
-                color = nextTurnAction.color
+                color = if (worldScreen.portraitLayout) Color.WHITE else nextTurnAction.color
             })
         else
             iconCell.clearActor()
@@ -82,7 +100,9 @@ class NextTurnButton(
 
     private fun getNextTurnAction(worldScreen: WorldScreen) =
         // Guaranteed to return a non-null NextTurnAction because the last isChoice always returns true
-        NextTurnAction.entries.first { it.isChoice(worldScreen) }
+        NextTurnAction.entries.first {
+            it.isChoice(worldScreen) && !(worldScreen.portraitLayout && it == NextTurnAction.NextUnit)
+        }
 
     @Readonly fun isNextUnitAction(): Boolean = nextTurnAction == NextTurnAction.NextUnit
 

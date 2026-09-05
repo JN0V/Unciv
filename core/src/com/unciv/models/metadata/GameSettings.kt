@@ -53,6 +53,8 @@ class GameSettings {
     var showMinimap = true
     /** Portrait (phone) layout: [LayoutMode.Auto] follows the screen orientation */
     var layoutMode: LayoutMode = LayoutMode.Auto
+    /** Minimap visibility in the portrait layout (separate from [showMinimap]: on a phone it is hidden by default) */
+    var showMinimapPortrait = false
     var showTutorials = true
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()

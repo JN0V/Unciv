@@ -24,7 +24,10 @@ class TileInfoTable(private val worldScreen: WorldScreen) : Table(BaseScreen.ski
     var civView: CivView = worldScreen.selectedGameView.civView
 
     init {
-        background = BaseScreen.skinStrings.getUiBackground(
+        background = if (worldScreen.portraitLayout) BaseScreen.skinStrings.getUiBackground(
+            "WorldScreen/Portrait/TileInfoTable", BaseScreen.skinStrings.roundedEdgeRectangleMidShape,
+            Color(0.06f, 0.1f, 0.32f, 0.94f)
+        ) else BaseScreen.skinStrings.getUiBackground(
             "WorldScreen/TileInfoTable",
             tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
         )

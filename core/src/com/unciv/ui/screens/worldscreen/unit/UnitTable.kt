@@ -98,10 +98,15 @@ class UnitTable(val worldScreen: WorldScreen) : Table() {
 
         pad(5f)
         touchable = Touchable.enabled
-        background = BaseScreen.skinStrings.getUiBackground(
-            "WorldScreen/UnitTable", BaseScreen.skinStrings.roundedEdgeRectangleMidShape
-        )
-        addActor(bg)
+        if (worldScreen.portraitLayout) {
+            // Lives inside the bottom sheet, which already has a background: no frame-in-a-frame
+            bg.isVisible = false
+        } else {
+            background = BaseScreen.skinStrings.getUiBackground(
+                "WorldScreen/UnitTable", BaseScreen.skinStrings.roundedEdgeRectangleMidShape
+            )
+            addActor(bg)
+        }
 
         promotionsTable.touchable = Touchable.enabled
 

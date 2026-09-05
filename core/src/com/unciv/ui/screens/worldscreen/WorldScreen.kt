@@ -2,6 +2,7 @@ package com.unciv.ui.screens.worldscreen
 
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
@@ -154,7 +155,9 @@ class WorldScreen(
     private val bottomSheet = if (portraitLayout) WorldScreenBottomSheet(this, bottomUnitTable, nextTurnButton) else null
     internal val smallUnitButton = SmallUnitButton(this, statusButtons)
     private val tutorialTaskTable = Table().apply {
-        background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
+        background = if (portraitLayout)
+            skinStrings.getUiBackground("WorldScreen/Portrait/TutorialTaskTable", skinStrings.roundedEdgeRectangleMidShape, Color(0.06f, 0.1f, 0.32f, 0.94f))
+        else skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
     }
     private var tutorialTaskTableHash = 0
 
@@ -407,6 +410,7 @@ class WorldScreen(
 
             
             minimapWrapper.update(getGameViewConsideringForOfWar().civView.getCiv())
+            if (portraitLayout) minimapWrapper.isVisible = game.settings.showMinimapPortrait
             bottomTileInfoTable.civView = getGameViewConsideringForOfWar().civView
             bottomTileInfoTable.updateTileTable(mapHolder.selectedTile)
             if (bottomSheet == null) {
@@ -490,7 +494,7 @@ class WorldScreen(
         val bottomOffset = if (bottomSheet != null && uiEnabled) {
             bottomSheet.update(bottomUnitTable.selectedUnit?.getUnit())
             minimapWrapper.y = bottomSheet.height
-            bottomTileInfoTable.setPosition(0f, bottomSheet.height + 5f)
+            bottomTileInfoTable.setPosition(6f, bottomSheet.height + 6f)
             bottomTileInfoTable.isVisible = mapHolder.selectedTile != null  // no empty box when nothing is selected
             if (battleTable.isVisible) battleTable.y = bottomSheet.height + 5f
             bottomSheet.height
@@ -502,7 +506,7 @@ class WorldScreen(
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
 
-        val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
+        val posZoomFromRight = if (minimapWrapper.isVisible) minimapWrapper.width
         else if (bottomSheet != null) 0f
         else bottomTileInfoTable.width
         zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f + bottomOffset, Align.bottomRight)
@@ -559,7 +563,7 @@ class WorldScreen(
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
             val hash = tutorialTask.hashCode()  // Default implementation is OK - we see the same instance or not
             if (hash != tutorialTaskTableHash) {
-                val renderEvent = RenderEvent(tutorialTask, this) {
+                val renderEvent = RenderEvent(tutorialTask, this, compact = portraitLayout) {
                     shouldUpdate = true
                 }
                 if (!renderEvent.isValid) return setInvisible()
