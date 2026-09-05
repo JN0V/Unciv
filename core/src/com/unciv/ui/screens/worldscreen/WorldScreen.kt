@@ -491,6 +491,7 @@ class WorldScreen(
             bottomSheet.update(bottomUnitTable.selectedUnit?.getUnit())
             minimapWrapper.y = bottomSheet.height
             bottomTileInfoTable.setPosition(0f, bottomSheet.height + 5f)
+            bottomTileInfoTable.isVisible = mapHolder.selectedTile != null  // no empty box when nothing is selected
             if (battleTable.isVisible) battleTable.y = bottomSheet.height + 5f
             bottomSheet.height
         } else 0f
