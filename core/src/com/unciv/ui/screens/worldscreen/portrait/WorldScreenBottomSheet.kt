@@ -100,7 +100,7 @@ class WorldScreenBottomSheet(
     /** Rebuilds the action buttons for [unit] (or clears them) and re-lays the sheet out at the bottom of the stage. */
     fun update(unit: MapUnit?) {
         val actions = if (unit != null && worldScreen.canChangeState)
-            UnitActions.getUnitActions(unit).sortedWith(compareBy({ primaryRank(it.type) }, { -it.useFrequency })).toList()
+            UnitActions.getUnitActions(unit).sortedWith(compareBy({ primaryRank(it.type, unit.isCivilian()) }, { -it.useFrequency })).toList()
         else emptyList()
 
         val newHash = unit?.hashCode() ?: 0
@@ -166,13 +166,14 @@ class WorldScreenBottomSheet(
     }
 
     /** Lower is earlier. The first slots go to what a newcomer most likely wants; rarely useful or risky actions come last. */
-    private fun primaryRank(type: UnitActionType): Int = when (type) {
+    private fun primaryRank(type: UnitActionType, civilian: Boolean): Int = when (type) {
         UnitActionType.FoundCity -> 0
         UnitActionType.Promote -> 1
         UnitActionType.ConstructImprovement, UnitActionType.CreateImprovement -> 2
-        UnitActionType.Automate, UnitActionType.ConnectRoad -> 3
-        UnitActionType.Explore -> 4
-        UnitActionType.Fortify, UnitActionType.FortifyUntilHealed, UnitActionType.Guard -> 5
+        // A worker is best automated; a soldier should explore or hold, automation comes later
+        UnitActionType.Automate, UnitActionType.ConnectRoad -> if (civilian) 3 else 6
+        UnitActionType.Explore -> if (civilian) 4 else 3
+        UnitActionType.Fortify, UnitActionType.FortifyUntilHealed, UnitActionType.Guard -> if (civilian) 5 else 4
         UnitActionType.SetUp, UnitActionType.Paradrop, UnitActionType.AirSweep -> 6
         UnitActionType.Sleep, UnitActionType.SleepUntilHealed -> 7
         UnitActionType.Upgrade, UnitActionType.Transform -> 8
