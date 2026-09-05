@@ -469,8 +469,15 @@ class AlertPopup(
     private fun addStartIntro() {
         val civInfo = viewingCiv
         addLeaderName(civInfo)
-        addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
-        addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
+        if (worldScreen.portraitLayout) {
+            // Phone: use the width, left-aligned paragraphs, slightly smaller history text
+            val width = stageWidth * 0.82f
+            add(civInfo.nation.startIntroPart1.toLabel(fontSize = 16).apply { wrap = true; setAlignment(com.badlogic.gdx.utils.Align.left) }).width(width).padBottom(10f).row()
+            add(civInfo.nation.startIntroPart2.toLabel(fontSize = 18).apply { wrap = true; setAlignment(com.badlogic.gdx.utils.Align.left) }).width(width).row()
+        } else {
+            addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
+            addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
+        }
         addCloseButton("Let's begin!")
 
         // Since there's introduction text, play the startIntroPart1 voice hook with the nation's theme.

@@ -143,6 +143,8 @@ abstract class BaseScreen : Screen {
         if (!game.settings.showTutorials) return
         if (game.settings.tutorialsShown.contains(tutorial.name)) return
         if (this is WorldScreen && this.autoPlay.isAutoPlaying()) return
+        // Phone layout: the floating task card (and its help popup) replaces the three generic welcome popups
+        if (game.settings.usePortraitLayout(isPortrait()) && tutorial in setOf(TutorialTrigger.Introduction, TutorialTrigger.NewGame, TutorialTrigger.SlowStart)) return
         if (test != null && !test()) return
         tutorialController.showTutorial(tutorial)
     }

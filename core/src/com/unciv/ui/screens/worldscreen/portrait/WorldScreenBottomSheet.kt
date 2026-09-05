@@ -52,6 +52,7 @@ class WorldScreenBottomSheet(
     }
 
     private val actionsRow = Table()
+    private val todoRow = Table()
     private val statusRow = Table()
     private val minimapToggle = Button(BaseScreen.skin)
     /** Cycles idle units; kept separate from the next turn button so that one never changes meaning */
@@ -92,6 +93,7 @@ class WorldScreenBottomSheet(
 
         add(unitTable).center().row()
         add(actionsRow).growX().row()
+        add(todoRow).growX().row()
         add(statusRow).growX()
     }
 
@@ -113,6 +115,7 @@ class WorldScreenBottomSheet(
         // Icon + count keeps the row narrow; the next turn button carries the long text
         nextUnitButton.label.setText(worldScreen.selectedGameView.civView.getCiv().units.getIdleUnits().count().tr())
         if (dueUnits) nextUnitCell.setActor(nextUnitButton).padLeft(6f) else nextUnitCell.setActor(null).padLeft(0f).width(0f)
+        updateTodo()
         nextTurnButton.pack()
         invalidateHierarchy()
         pack()
@@ -168,6 +171,22 @@ class WorldScreenBottomSheet(
         val upDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/PrimaryButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint)
         val downDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/PrimaryButtonPressed", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint.cpy().lerp(Color.BLACK, 0.3f))
         return Button.ButtonStyle(base).apply { up = upDrawable; down = downDrawable; over = upDrawable; checked = upDrawable }
+    }
+
+    /** What the game requires before the turn can end, as an orange line above the buttons */
+    private fun updateTodo() {
+        todoRow.clear()
+        val pending = nextTurnButton.pendingAction ?: return
+        val chip = Table()
+        chip.background = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/Todo", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, colorFromRGB(120, 70, 10))
+        chip.touchable = Touchable.enabled
+        chip.pad(6f, 12f, 6f, 12f)
+        chip.add(ImageGetter.getImage("OtherIcons/ExclamationMark").apply { color = colorFromRGB(255, 190, 80) }).size(22f).padRight(8f)
+        val text = "{Before ending the turn}: ".tr() + pending.getText(worldScreen).tr()
+        chip.add(text.toLabel(fontSize = 15).apply { setEllipsis("…") }).minWidth(0f).growX().left()
+        chip.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(16f).padLeft(6f)
+        chip.onClick { pending.action(worldScreen) }
+        todoRow.add(chip).growX().minHeight(40f).pad(2f)
     }
 
     /** Opens the full action list, as the "More" button does (no-op when there is none) */

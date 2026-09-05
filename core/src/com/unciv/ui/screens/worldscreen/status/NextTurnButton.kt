@@ -28,6 +28,11 @@ class NextTurnButton(
     private val worldScreen: WorldScreen
 ) : IconTextButton("", null, 30) {
     private var nextTurnAction = Default
+    /** Portrait layout: an action the game requires before the turn can end (pick construction, tech...), shown as a to-do by the bottom sheet */
+    var pendingAction: NextTurnAction? = null
+        private set
+    private val nonBlockingActions = setOf(Default, NextTurnAction.NextTurn, NextTurnAction.Working, NextTurnAction.Waiting,
+        NextTurnAction.AutoPlay, NextTurnAction.RetryUpload, NextTurnAction.NextUnit, NextTurnAction.MoveAutomatedUnits)
     private val unitsDueLabel = Label("", BaseScreen.skin)
     private val unitsDueCell: Cell<Label>
 
@@ -69,25 +74,27 @@ class NextTurnButton(
         label.setText(nextTurnAction.getText(worldScreen).tr())
         label.color = if (worldScreen.portraitLayout) Color.WHITE else nextTurnAction.color
         if (worldScreen.portraitLayout) {
-            // One stable, green "next turn" button; other states get their own tint
+            // One stable, green "next turn" button; a required action is listed separately by the sheet
+            pendingAction = if (nextTurnAction in nonBlockingActions) null else nextTurnAction
+            if (pendingAction != null) label.setText(NextTurnAction.NextTurn.getText(worldScreen).tr())
             val tint = when (nextTurnAction) {
-                NextTurnAction.Default, NextTurnAction.NextTurn -> colorFromRGB(31, 126, 55)
                 NextTurnAction.Working, NextTurnAction.Waiting -> colorFromRGB(37, 43, 62)
-                NextTurnAction.PickConstruction, NextTurnAction.PickTech -> colorFromRGB(57, 152, 219)
-                else -> nextTurnAction.color.cpy().lerp(Color.BLACK, 0.5f)
+                NextTurnAction.AutoPlay, NextTurnAction.RetryUpload -> nextTurnAction.color.cpy().lerp(Color.BLACK, 0.5f)
+                else -> colorFromRGB(31, 126, 55)
             }
             val upDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint)
             val downDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButtonPressed", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint.cpy().lerp(Color.BLACK, 0.3f))
             // (locals deliberately not named up/down: inside apply{} the style's own members would shadow them)
             style = ButtonStyle(style).apply { up = upDrawable; down = downDrawable; over = upDrawable; disabled = downDrawable; checked = upDrawable }
             // Long action names ("Pick construction", "Waiting for other players...") must still fit the sheet
-            val text = nextTurnAction.getText(worldScreen).tr()
+            val text = label.text.toString()
             label.setFontSize(if (text.length > 16) 17 else 22)
             label.setEllipsis("…")
             labelCell.width(minOf(label.prefWidth, worldScreen.stage.width - 215f)).minWidth(0f)
         }
-        if (nextTurnAction.icon != null && ImageGetter.imageExists(nextTurnAction.icon!!))
-            iconCell.setActor(ImageGetter.getImage(nextTurnAction.icon).apply {
+        val iconName = if (worldScreen.portraitLayout && pendingAction != null) NextTurnAction.NextTurn.icon else nextTurnAction.icon
+        if (iconName != null && ImageGetter.imageExists(iconName))
+            iconCell.setActor(ImageGetter.getImage(iconName).apply {
                 setSize(30f)
                 color = if (worldScreen.portraitLayout) Color.WHITE else nextTurnAction.color
             })
