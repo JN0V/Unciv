@@ -66,6 +66,7 @@ abstract class BaseScreen : Screen {
 
         /** The ExtendViewport sets the _minimum_(!) world size - the actual world size will be larger, fitted to screen/window aspect ratio. */
         stage = UncivStage(ExtendViewport(height, height))
+        applySafeInset(Gdx.graphics.width, Gdx.graphics.height)
 
         if (enableSceneDebug.active && this !is CrashScreen && this !is GameStartScreen)
             stage.setSceneDebugMode()
@@ -92,6 +93,8 @@ abstract class BaseScreen : Screen {
         Gdx.gl.glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
+        // Screens may be built off the GL thread, where the viewport's glViewport call is lost: re-apply here
+        stage.viewport.apply()
         stage.act()
         stage.draw()
         debugScreenshotIfRequested()
@@ -116,10 +119,25 @@ abstract class BaseScreen : Screen {
 
     override fun resize(width: Int, height: Int) {
         if (this !is RecreateOnResize) {
-            stage.viewport.update(width, height, true)
-        } else if (stage.viewport.screenWidth != width || stage.viewport.screenHeight != height) {
+            applySafeInset(width, height)
+        } else if (!viewportMatches(width, height)) {
             game.replaceCurrentScreen{ recreate() }
         }
+    }
+
+    /** True when the stage viewport already fits this screen size (accounting for the reserved cutout band) */
+    fun viewportMatches(width: Int, height: Int) =
+        stage.viewport.screenWidth == width && stage.viewport.screenHeight == height - topSafeInsetPixels(width, height)
+
+    /** Pixels reserved at the top for a display cutout (portrait phone layout only); the band shows [clearColor] */
+    private fun topSafeInsetPixels(width: Int, height: Int): Int =
+        if (game.settings.usePortraitLayout(height > width)) maxOf(Gdx.graphics.safeInsetTop, com.unciv.utils.Display.cutoutInsetTop) else 0
+
+    /** Sizes the viewport so the whole stage sits below the display cutout */
+    private fun applySafeInset(width: Int, height: Int) {
+        val inset = topSafeInsetPixels(width, height)
+        stage.viewport.update(width, height - inset, true)
+        stage.viewport.setScreenPosition(0, 0)
     }
 
     override fun pause() {}

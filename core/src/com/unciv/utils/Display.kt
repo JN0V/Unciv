@@ -35,6 +35,9 @@ interface PlatformDisplay {
 }
 
 object Display {
+    /** Pixels covered by a display cutout at the top, as reported by the platform (0 when drawing is padded or there is none) */
+    @Volatile var cutoutInsetTop: Int = 0
+
     lateinit var platform: PlatformDisplay
 
     fun hasOrientation() = platform.hasOrientation()

@@ -100,7 +100,7 @@ class WorldScreenBottomSheet(
     /** Rebuilds the action buttons for [unit] (or clears them) and re-lays the sheet out at the bottom of the stage. */
     fun update(unit: MapUnit?) {
         val actions = if (unit != null && worldScreen.canChangeState)
-            UnitActions.getUnitActions(unit).sortedByDescending { it.useFrequency }.toList()
+            UnitActions.getUnitActions(unit).sortedWith(compareBy({ primaryRank(it.type) }, { -it.useFrequency })).toList()
         else emptyList()
 
         val newHash = unit?.hashCode() ?: 0
@@ -163,6 +163,25 @@ class WorldScreenBottomSheet(
             if (unitAction.action == null) continue
             keyShortcuts.add(unitAction.type.binding) { activateAction(unitAction, unit) }
         }
+    }
+
+    /** Lower is earlier. The first slots go to what a newcomer most likely wants; rarely useful or risky actions come last. */
+    private fun primaryRank(type: UnitActionType): Int = when (type) {
+        UnitActionType.FoundCity -> 0
+        UnitActionType.Promote -> 1
+        UnitActionType.ConstructImprovement, UnitActionType.CreateImprovement -> 2
+        UnitActionType.Automate, UnitActionType.ConnectRoad -> 3
+        UnitActionType.Explore -> 4
+        UnitActionType.Fortify, UnitActionType.FortifyUntilHealed, UnitActionType.Guard -> 5
+        UnitActionType.SetUp, UnitActionType.Paradrop, UnitActionType.AirSweep -> 6
+        UnitActionType.Sleep, UnitActionType.SleepUntilHealed -> 7
+        UnitActionType.Upgrade, UnitActionType.Transform -> 8
+        UnitActionType.StopAutomation, UnitActionType.StopExploration, UnitActionType.StopMovement,
+        UnitActionType.StopEscortFormation, UnitActionType.ShowUnitDestination -> 9
+        UnitActionType.Pillage -> 15
+        UnitActionType.EscortFormation, UnitActionType.SwapUnits -> 20
+        UnitActionType.DisbandUnit, UnitActionType.GiftUnit -> 30
+        else -> 10
     }
 
     /** Green "primary action" look for a button */

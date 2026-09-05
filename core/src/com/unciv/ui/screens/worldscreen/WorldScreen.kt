@@ -808,7 +808,7 @@ class WorldScreen(
 
     override fun resize(width: Int, height: Int) {
         resizeDeferTimer?.cancel()
-        if (resizeDeferTimer == null && stage.viewport.screenWidth == width && stage.viewport.screenHeight == height) return
+        if (resizeDeferTimer == null && viewportMatches(width, height)) return
         resizeDeferTimer = timer("Resize", daemon = true, 500L, Long.MAX_VALUE) {
             resizeDeferTimer?.cancel()
             resizeDeferTimer = null

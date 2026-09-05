@@ -85,12 +85,14 @@ open class AndroidLauncher : AndroidApplication() {
             UncivFiles.getSettingsForPlatformLaunchers(filesDir.path)
         }
 
+        val cutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
         // If settings.androidCutout is false, padding is applied
         if (!settings.androidCutout) {
-            val cutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
             view.setPadding(cutoutInsets.left, cutoutInsets.top, cutoutInsets.right, cutoutInsets.bottom)
+            Display.cutoutInsetTop = 0
         } else {
             view.setPadding(0, 0, 0, 0)
+            Display.cutoutInsetTop = cutoutInsets.top  // the screens keep their UI below the cutout themselves
         }
 
         return insets

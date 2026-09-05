@@ -152,7 +152,7 @@ class GameSettings {
     var maxAutosavesStored = 10
     var turnsBetweenAutosaves = 1
 
-    var androidCutout = false
+    var androidCutout = true  // the game paints the cutout band in its own colour and keeps the UI below it
     var androidHideSystemUi = true
     var fontFamilyData: FontFamilyData = FontFamilyData.default
     var fontSizeMultiplier: Float = 1f
