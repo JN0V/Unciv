@@ -62,7 +62,8 @@ class RenderEvent(
                     // Title plus the first "how to" line in smaller type; images and the rest open on tap (see WorldScreen)
                     val textLines = event.civilopediaText.filter { it.extraImage.isEmpty() && it.text.isNotEmpty() && !it.separator }
                     val lines = ArrayList<FormattedLine>()
-                    textLines.firstOrNull()?.let { lines.add(it) }
+                    // The title may be a header in the popup; on the card it is plain centered text
+                    textLines.firstOrNull()?.let { lines.add(FormattedLine(it.text, centered = true, link = it.link)) }
                     textLines.drop(1).firstOrNull()?.let { lines.add(FormattedLine(it.text, size = 15, color = "#c8d2e6", link = it.link)) }
                     val row = Table()
                     row.add(MarkupRenderer.render(lines, textWidth - 40f, linkAction = ::openCivilopedia)).growX()

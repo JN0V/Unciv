@@ -558,6 +558,23 @@ class WorldScreen(
         }
     }
 
+    /** Phone: the card only shows the title and the how-to line, the full help (illustration, why, what to know) opens as a popup */
+    private fun openTutorialTaskPopup(tutorialTask: Event) {
+        val popup = Popup(this)
+        popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); shouldUpdate = true }).row()
+        popup.addCloseButton("Got it")
+        popup.open()
+    }
+
+    /** A task that carries real explanations (more than title + how-to) opens its help once by itself when it first appears,
+     *  so a newcomer reads the rule before being asked to apply it. Not while a briefing or another popup is pending. */
+    private fun explainTutorialTaskIfNew(tutorialTask: Event) {
+        if (!portraitLayout || hasOpenPopups() || viewingCiv.popupAlerts.isNotEmpty()) return
+        if (tutorialTask.civilopediaText.count { it.text.isNotEmpty() && !it.separator } < 4) return
+        if (!explainedTutorialTasks.add("${gameInfo.gameId}/${tutorialTask.name}")) return
+        openTutorialTaskPopup(tutorialTask)
+    }
+
     private fun displayTutorialTaskOnUpdate() {
         fun setInvisible() {
             tutorialTaskTable.isVisible = false
@@ -578,6 +595,7 @@ class WorldScreen(
                 tutorialTaskTable.add(renderEvent).pad(10f)
                 tutorialTaskTableHash = hash
             }
+            explainTutorialTaskIfNew(tutorialTask)  // every update: the briefing popup may have been in the way when the card appeared
         } else {
             tutorialTaskTable.clear()
             tutorialTaskTable.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(30f,30f) }).pad(5f)
@@ -588,11 +606,7 @@ class WorldScreen(
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
         tutorialTaskTable.onClick {
             if (portraitLayout && !UncivGame.Current.isTutorialTaskCollapsed) {
-                // Phone: the card only shows the title, the full help (with illustration) opens as a popup
-                val popup = Popup(this)
-                popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); shouldUpdate = true }).row()
-                popup.addCloseButton()
-                popup.open()
+                openTutorialTaskPopup(tutorialTask)
             } else {
                 UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
                 displayTutorialTaskOnUpdate()
@@ -831,6 +845,11 @@ class WorldScreen(
         }
 
         super.render(delta)
+    }
+
+    companion object {
+        /** "gameId/event name" of tutorial tasks whose help popup already opened by itself - cleared when a scenario starts fresh */
+        val explainedTutorialTasks = HashSet<String>()
     }
 
     /** Development aid (see [BaseScreen.debugScreenshotIfRequested]): env UNCIV_DEBUG_ACTION picks what to do before the capture */
