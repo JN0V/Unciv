@@ -11,6 +11,7 @@ import com.unciv.ui.screens.mainmenuscreen.ScenarioListScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 import com.unciv.logic.GameInfo
+import com.unciv.logic.files.ScenarioProgress
 import com.unciv.logic.VictoryData
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.metadata.GameSetupInfo
@@ -207,7 +208,7 @@ class VictoryScreen(
 
         // A scenario ends here: offer the way back to the scenario list instead of a fresh random game
         Concurrency.run("IsScenario") {
-            if (!ScenarioListScreen.isScenarioGame(gameInfo.gameId)) return@run
+            if (!ScenarioProgress.isScenarioGame(gameInfo.gameId)) return@run
             launchOnGLThread {
                 rightSideButton.setText("Discovery".tr())
                 rightSideButton.clearActivationActions(ActivationTypes.Tap)  // replace "Start new game", do not stack on it

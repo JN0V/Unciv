@@ -37,6 +37,7 @@ import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.popups.options.OptionsPopupPages
 import com.unciv.ui.screens.civilopediascreen.CivilopediaScreen
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
+import com.unciv.logic.files.ScenarioProgress
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
 // Both `this is CrashScreen` and `this::createPopupBasedDispatcherVetoer` are flagged.
@@ -161,8 +162,9 @@ abstract class BaseScreen : Screen {
         if (!game.settings.showTutorials) return
         if (game.settings.tutorialsShown.contains(tutorial.name)) return
         if (this is WorldScreen && this.autoPlay.isAutoPlaying()) return
-        // Phone layout: the floating task card (and its help popup) replaces the three generic welcome popups
-        if (game.settings.usePortraitLayout(isPortrait()) && tutorial in setOf(TutorialTrigger.Introduction, TutorialTrigger.NewGame, TutorialTrigger.SlowStart)) return
+        // Phone layout, in a scenario: its briefing and task card replace the three generic welcome popups
+        if (game.settings.usePortraitLayout(isPortrait()) && this is WorldScreen && ScenarioProgress.isScenarioGame(gameInfo.gameId)
+                && tutorial in setOf(TutorialTrigger.Introduction, TutorialTrigger.NewGame, TutorialTrigger.SlowStart)) return
         if (test != null && !test()) return
         tutorialController.showTutorial(tutorial)
     }

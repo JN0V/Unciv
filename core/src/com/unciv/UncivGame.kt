@@ -66,6 +66,7 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
     lateinit var musicController: MusicController
     lateinit var onlineMultiplayer: Multiplayer
     lateinit var files: UncivFiles
+    fun isFilesInitialized() = this::files.isInitialized
 
     var isTutorialTaskCollapsed = false
 

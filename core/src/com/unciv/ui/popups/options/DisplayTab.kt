@@ -189,6 +189,8 @@ internal class DisplayTab(
             ) {
                 settings.tutorialsShown.clear()
                 settings.tutorialTasksCompleted.clear()
+                settings.scenarioTutorialTasks.clear()
+                settings.tutorialTasksExplained.clear()
                 resetTutorialsButton.setText("Done!".tr())
                 resetTutorialsButton.clearListeners()
             }.open(true)

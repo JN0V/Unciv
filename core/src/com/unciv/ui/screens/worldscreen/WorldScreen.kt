@@ -50,7 +50,7 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.devconsole.DevConsolePopup
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
-import com.unciv.ui.screens.mainmenuscreen.ScenarioListScreen
+import com.unciv.logic.files.ScenarioProgress
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
@@ -146,7 +146,9 @@ class WorldScreen(
 
     /** Portrait (phone) layout: bottom sheet instead of floating unit/actions/next-turn widgets */
     internal val portraitLayout = game.settings.usePortraitLayout(isPortrait())
-    private val isScenarioGame by lazy { ScenarioListScreen.isScenarioGame(gameInfo.gameId) }
+    private val isScenarioGame by lazy { ScenarioProgress.isScenarioGame(gameInfo.gameId) }
+    /** The task card shows in a scenario (a tutorial by nature) even when the game's tutorials are turned off */
+    private val showTutorialTasks get() = game.settings.tutorialsEnabledFor(gameInfo)
     /** A scenario brings its own briefing and guided tasks: the game's generic tutorial popups would only get in the way (phone) */
     private val suppressGenericTutorials get() = portraitLayout && isScenarioGame
 
@@ -526,7 +528,7 @@ class WorldScreen(
     }
 
     internal fun getCurrentTutorialTask(): Event? {
-        if (!game.settings.tutorialTasksCompleted.contains("Create a trade route")) {
+        if (!game.settings.completedTutorialTasks(gameInfo).contains("Create a trade route")) {
             if (viewingCiv.cache.citiesConnectedToCapitalToMediums.any { it.key.civ == viewingCiv })
                 game.settings.addCompletedTutorialTask("Create a trade route")
         }
@@ -622,7 +624,7 @@ class WorldScreen(
             tutorialTaskTable.clear()
             tutorialTaskTableHash = 0
         }
-        if (!game.settings.showTutorials || viewingCiv.isDefeated()) return setInvisible()
+        if (!showTutorialTasks || viewingCiv.isDefeated()) return setInvisible()
         val tutorialTask = getCurrentTutorialTask() ?: return setInvisible()
 
         if (!UncivGame.Current.isTutorialTaskCollapsed) {

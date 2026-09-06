@@ -106,7 +106,7 @@ class CityScreenPortrait(
 
     private fun updateTaskCard() {
         val worldScreen = cityScreen.game.worldScreen
-        val task = if (worldScreen != null && cityScreen.game.settings.showTutorials && cityScreen.canChangeState)
+        val task = if (worldScreen != null && cityScreen.game.settings.tutorialsEnabledFor(worldScreen.gameInfo) && cityScreen.canChangeState)
             worldScreen.getCurrentTutorialTask() else null
         if (task == null) {
             taskCard.isVisible = false

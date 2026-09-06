@@ -5,6 +5,8 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.utils.Base64Coder
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.GameInfo
+import com.unciv.logic.files.ScenarioProgress
 import com.unciv.logic.multiplayer.FriendList
 import com.unciv.logic.multiplayer.chat.ChatWebSocket
 import com.unciv.models.UncivSound
@@ -61,6 +63,9 @@ class GameSettings {
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()
     var tutorialTasksCompleted = HashSet<String>()
+    /** Completed tutorial tasks of each scenario game (gameId -> task names): a scenario restarts its guidance
+     *  without touching the device-wide [tutorialTasksCompleted] - always read through [completedTutorialTasks] */
+    var scenarioTutorialTasks = HashMap<String, HashSet<String>>()
     /** gameIds the player has won - lets the scenario list mark completed scenarios */
     var wonGameIds = HashSet<String>()
     /** "gameId/event name" of tutorial tasks whose help already opened by itself (phone) - cleared when a scenario starts fresh */
@@ -234,8 +239,30 @@ class GameSettings {
         windowState = WindowState.current()
     }
 
+    /** The completed tutorial tasks that apply to [gameInfo] (default: the game being played):
+     *  a scenario keeps its own set, any other game shares the device-wide [tutorialTasksCompleted] */
+    @Readonly @Suppress("purity") // only memoizes: the scenario id cache and the per-game set
+    fun completedTutorialTasks(gameInfo: GameInfo? = UncivGame.getGameInfoOrNull()): HashSet<String> {
+        if (gameInfo == null || !ScenarioProgress.isScenarioGame(gameInfo.gameId)) return tutorialTasksCompleted
+        synchronized(scenarioTutorialTasks) {
+            return scenarioTutorialTasks.getOrPut(gameInfo.gameId) { HashSet() }
+        }
+    }
+
+    /** Tutorial guidance (task card, generic tutorial popups) is shown for [gameInfo]: a scenario is a tutorial,
+     *  so its tasks show even when the player turned the game's tutorials off */
+    @Readonly @Suppress("purity") // only memoizes the scenario id cache
+    fun tutorialsEnabledFor(gameInfo: GameInfo? = UncivGame.getGameInfoOrNull()): Boolean =
+        showTutorials || ScenarioProgress.isScenarioGame(gameInfo)
+
+    /** Forgets the tutorial progress of one scenario game: its tasks and the help popups already shown by themselves */
+    fun resetScenarioTutorialTasks(gameId: String) {
+        synchronized(scenarioTutorialTasks) { scenarioTutorialTasks.remove(gameId) }
+        tutorialTasksExplained.removeAll { it.startsWith("$gameId/") }
+    }
+
     fun addCompletedTutorialTask(tutorialTask: String): Boolean {
-        if (!tutorialTasksCompleted.add(tutorialTask)) return false
+        if (!completedTutorialTasks().add(tutorialTask)) return false
         UncivGame.Current.isTutorialTaskCollapsed = false
         save()
         return true

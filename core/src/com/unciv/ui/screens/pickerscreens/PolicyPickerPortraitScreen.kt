@@ -55,7 +55,7 @@ class PolicyPickerPortraitScreen(
 
     init {
         // Scenarios explain doctrines through their own tasks; the generic popup only gets in the way there
-        if (!com.unciv.ui.screens.mainmenuscreen.ScenarioListScreen.isScenarioGame(viewingCiv.gameInfo.gameId))
+        if (!com.unciv.logic.files.ScenarioProgress.isScenarioGame(viewingCiv.gameInfo.gameId))
             displayTutorial(com.unciv.models.TutorialTrigger.CultureAndPolicies)
         val root = Table()
         root.setFillParent(true)

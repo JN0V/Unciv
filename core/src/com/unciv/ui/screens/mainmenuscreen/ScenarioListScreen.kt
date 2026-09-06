@@ -6,7 +6,6 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
-import com.unciv.UncivGame
 import com.unciv.logic.GameInfoPreview
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.ui.components.extensions.surroundWithCircle
@@ -239,20 +238,15 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         popup.open()
     }
 
-    /** @param freshStart true when starting the scenario file itself (not resuming a save of it):
-     *  scenarios are tutorials, so the device-wide "tutorial task completed" memory is reset so their guidance shows again */
+    /** @param freshStart true when starting the scenario file itself (not resuming a save of it) - "Restart from the
+     *  beginning": the earlier run of that scenario is forgotten (its saves deleted, its completion and tutorial
+     *  progress reset) so the scenario list, the task card and the help popups behave as on the first start */
     private fun loadScenario(file: FileHandle, freshStart: Boolean = false) {
         val loadingPopup = LoadingPopup(this)
         Concurrency.run("LoadScenario") {
             try {
-                if (freshStart) {
-                    game.settings.tutorialTasksCompleted.clear()
-                    game.settings.showTutorials = true
-                    game.isTutorialTaskCollapsed = false
-                    game.settings.tutorialTasksExplained.clear()
-                    game.settings.save()
-                }
                 val gameInfo = game.files.loadGameFromFile(file)
+                if (freshStart) forgetPreviousRun(gameInfo.gameId)
                 game.loadGame(gameInfo, callFromLoadScreen = true)
             } catch (ex: Exception) {
                 launchOnGLThread {
@@ -264,30 +258,18 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         }
     }
 
-    override fun recreate(): BaseScreen = ScenarioListScreen()
-
-    companion object {
-        /** The scenario files (path and modification time) the cached [scenarioGameIds] were read from */
-        private var scenarioGameIdsKey: List<Pair<String, Long>>? = null
-        private var scenarioGameIds: Set<String> = emptySet()
-
-        /** gameIds of the scenarios shipped by installed mods. The previews are re-read only when the list of scenario
-         *  files changes (a mod installed or updated from the mod manager during the session) - a rare, small read */
-        @Synchronized
-        private fun getScenarioGameIds(): Set<String> {
-            val files = UncivGame.Current.files
-            val scenarioFiles = files.getScenarioFiles().map { (file, _) -> file }.toList()
-            val key = scenarioFiles.map { it.path() to it.lastModified() }
-            if (key != scenarioGameIdsKey) {
-                scenarioGameIds = scenarioFiles.mapNotNull { file ->
-                    try { files.loadGamePreviewFromFile(file).gameId } catch (_: Exception) { null }
-                }.toSet()
-                scenarioGameIdsKey = key
-            }
-            return scenarioGameIds
+    private fun forgetPreviousRun(gameId: String) {
+        if (gameId.isEmpty()) return
+        for (saveFile in game.files.getSaves()) {
+            val preview = try { game.files.loadGamePreviewFromFile(saveFile) } catch (_: Exception) { continue }
+            if (preview.gameId != gameId) continue
+            try { game.files.deleteSave(saveFile) } catch (_: Exception) { }
         }
-
-        /** True when [gameId] is the id of a scenario shipped by an installed mod */
-        fun isScenarioGame(gameId: String): Boolean = gameId.isNotEmpty() && gameId in getScenarioGameIds()
+        game.settings.wonGameIds.remove(gameId)
+        game.settings.resetScenarioTutorialTasks(gameId)
+        game.isTutorialTaskCollapsed = false
+        game.settings.save()
     }
+
+    override fun recreate(): BaseScreen = ScenarioListScreen()
 }
