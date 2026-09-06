@@ -76,10 +76,12 @@ class NextTurnButton(
         if (worldScreen.portraitLayout) {
             // One stable, green "next turn" button; a required action is listed separately by the sheet
             pendingAction = if (nextTurnAction in nonBlockingActions) null else nextTurnAction
-            if (pendingAction != null) label.setText(NextTurnAction.NextTurn.getText(worldScreen).tr())
-            val tint = when (nextTurnAction) {
-                NextTurnAction.Working, NextTurnAction.Waiting -> colorFromRGB(37, 43, 62)
-                NextTurnAction.AutoPlay, NextTurnAction.RetryUpload -> nextTurnAction.color.cpy().lerp(Color.BLACK, 0.5f)
+            // A blocking action (pick a tech, a construction...) turns the button orange and says what the tap opens
+            if (pendingAction != null) label.setText("Before ending: [${nextTurnAction.getText(worldScreen).tr()}]".tr())
+            val tint = when {
+                pendingAction != null -> colorFromRGB(160, 90, 15)
+                nextTurnAction == NextTurnAction.Working || nextTurnAction == NextTurnAction.Waiting -> colorFromRGB(37, 43, 62)
+                nextTurnAction == NextTurnAction.AutoPlay || nextTurnAction == NextTurnAction.RetryUpload -> nextTurnAction.color.cpy().lerp(Color.BLACK, 0.5f)
                 else -> colorFromRGB(31, 126, 55)
             }
             val upDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/NextTurnButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, tint)
@@ -92,7 +94,7 @@ class NextTurnButton(
             label.setEllipsis("…")
             labelCell.width(minOf(label.prefWidth, worldScreen.stage.width - 215f)).minWidth(0f)
         }
-        val iconName = if (worldScreen.portraitLayout && pendingAction != null) NextTurnAction.NextTurn.icon else nextTurnAction.icon
+        val iconName = if (worldScreen.portraitLayout && pendingAction != null) "OtherIcons/ExclamationMark" else nextTurnAction.icon
         if (iconName != null && ImageGetter.imageExists(iconName))
             iconCell.setActor(ImageGetter.getImage(iconName).apply {
                 setSize(30f)

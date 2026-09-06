@@ -188,7 +188,9 @@ class WorldScreenBottomSheet(
         UnitActionType.StopAutomation, UnitActionType.StopExploration, UnitActionType.StopMovement,
         UnitActionType.StopEscortFormation, UnitActionType.ShowUnitDestination -> 9
         UnitActionType.Pillage -> 15
-        UnitActionType.EscortFormation, UnitActionType.SwapUnits -> 20
+        // A settler or worker travelling with a soldier: shown before Explore/Sleep (the S3 scenario teaches it)
+        UnitActionType.EscortFormation -> if (civilian) 3 else 20
+        UnitActionType.SwapUnits -> 20
         UnitActionType.DisbandUnit, UnitActionType.GiftUnit -> 30
         else -> 10
     }
