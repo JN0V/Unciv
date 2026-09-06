@@ -2,6 +2,8 @@ package com.unciv.ui.screens.worldscreen
 
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.unciv.ui.components.extensions.surroundWithCircle
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -589,6 +591,17 @@ class WorldScreen(
         openTutorialTaskPopup(tutorialTask, onScreen, afterChoice)
     }
 
+    /** "I read it": folds the task card into a small icon until the next task (phone). Shared with the city screen. */
+    internal fun tutorialTaskCollapseButton(onCollapse: () -> Unit = { displayTutorialTaskOnUpdate() }): Actor {
+        val button = ImageGetter.getImage("OtherIcons/Close").apply { setSize(18f, 18f) }.surroundWithCircle(30f, color = Color(0.2f, 0.3f, 0.5f, 1f))
+        button.touchable = Touchable.enabled
+        button.onClick {
+            UncivGame.Current.isTutorialTaskCollapsed = true
+            onCollapse()
+        }
+        return button
+    }
+
     private fun displayTutorialTaskOnUpdate() {
         fun setInvisible() {
             tutorialTaskTable.isVisible = false
@@ -607,6 +620,7 @@ class WorldScreen(
                 if (!renderEvent.isValid) return setInvisible()
                 tutorialTaskTable.clear()
                 tutorialTaskTable.add(renderEvent).pad(10f)
+                if (portraitLayout) tutorialTaskTable.add(tutorialTaskCollapseButton()).top().pad(6f)
                 tutorialTaskTableHash = hash
             }
             explainTutorialTaskIfNew(tutorialTask)  // every update: the briefing popup may have been in the way when the card appeared

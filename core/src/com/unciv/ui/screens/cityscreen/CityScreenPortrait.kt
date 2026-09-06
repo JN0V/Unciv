@@ -110,20 +110,32 @@ class CityScreenPortrait(
             taskCardHash = 0
             return
         }
-        val hash = task.hashCode()
+        val collapsed = cityScreen.game.isTutorialTaskCollapsed
+        val hash = task.hashCode() * 2 + (if (collapsed) 1 else 0)
         if (hash != taskCardHash) {
             taskCardHash = hash
             taskCard.clear()
-            val render = RenderEvent(task, worldScreen!!, mode = RenderEvent.Mode.Compact) { cityScreen.updateAsync() }
-            if (!render.isValid) { taskCard.isVisible = false; return }
-            taskCard.add(render).pad(8f)
-            taskCard.onClick { worldScreen.openTutorialTaskPopup(task, cityScreen) { cityScreen.updateAsync() } }
+            taskCard.clearListeners()
+            if (collapsed) {
+                // Folded: a small reminder icon, tap to unfold
+                taskCard.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(26f, 26f) }).pad(5f)
+                taskCard.onClick { cityScreen.game.isTutorialTaskCollapsed = false; cityScreen.updateAsync() }
+            } else {
+                // One line only (title, tap for the help) so the city map stays visible; the cross folds it
+                val render = RenderEvent(task, worldScreen!!, mode = RenderEvent.Mode.Compact, titleOnly = true) { cityScreen.updateAsync() }
+                if (!render.isValid) { taskCard.isVisible = false; return }
+                render.touchable = Touchable.enabled
+                render.onClick { worldScreen.openTutorialTaskPopup(task, cityScreen) { cityScreen.updateAsync() } }
+                taskCard.add(render).pad(4f, 8f, 4f, 4f)
+                taskCard.add(worldScreen.tutorialTaskCollapseButton { cityScreen.updateAsync() }).pad(4f)
+            }
             taskCard.pack()
         }
-        // Just above the tabs row, at the bottom of the map area: the city center (worked tiles) stays visible
+        // Right under the resources summary, at the top of the map area (the city center stays visible below)
         validate()
-        val tabsTop = tabsRow.localToStageCoordinates(Vector2(0f, tabsRow.height)).y
-        taskCard.setPosition(screenStage.width / 2f, tabsTop + 6f, Align.bottom)
+        val statsBottom = statsRow.localToStageCoordinates(Vector2(0f, 0f)).y
+        if (collapsed) taskCard.setPosition(screenStage.width - 8f, statsBottom - 6f, Align.topRight)
+        else taskCard.setPosition(screenStage.width / 2f, statsBottom - 6f, Align.top)
         taskCard.isVisible = true
         taskCard.toFront()
         worldScreen!!.explainTutorialTaskIfNew(task, cityScreen) { cityScreen.updateAsync() }
@@ -133,11 +145,11 @@ class CityScreenPortrait(
         "CityScreen/Portrait/$part", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, color)
 
     fun update() {
-        updateTaskCard()
         updateHeader()
         updateStats()
         updateTabs()
         updateContent()
+        updateTaskCard()  // last: it is positioned under the stats row, which must be laid out first
     }
 
     // ---------------------------------------------------------------- header + stats

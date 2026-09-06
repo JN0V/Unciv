@@ -27,6 +27,8 @@ class RenderEvent(
     val worldScreen: WorldScreen,
     val unit: MapUnit? = null,
     val mode: Mode = Mode.Classic,
+    /** [Mode.Compact] only: leave out the how-to line (a one-line strip, e.g. over the city map) */
+    val titleOnly: Boolean = false,
     val onChoice: (EventChoice) -> Unit
 ) : Table() {
     /** [Compact]: title line only (floating card on a phone). [Popup]: full text and images, wide. */
@@ -65,7 +67,7 @@ class RenderEvent(
                     val lines = ArrayList<FormattedLine>()
                     // The title may be a header in the popup; on the card it is plain centered text
                     textLines.firstOrNull()?.let { lines.add(FormattedLine(it.text, centered = true, link = it.link)) }
-                    textLines.drop(1).firstOrNull()?.let { lines.add(FormattedLine(it.text, size = 15, color = "#c8d2e6", link = it.link)) }
+                    if (!titleOnly) textLines.drop(1).firstOrNull()?.let { lines.add(FormattedLine(it.text, size = 15, color = "#c8d2e6", link = it.link)) }
                     val row = Table()
                     row.add(MarkupRenderer.render(lines, textWidth - 40f, linkAction = ::openCivilopedia)).growX()
                     row.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(18f).padLeft(8f)
