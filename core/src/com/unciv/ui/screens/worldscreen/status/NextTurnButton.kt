@@ -76,8 +76,8 @@ class NextTurnButton(
         if (worldScreen.portraitLayout) {
             // One stable, green "next turn" button; a required action is listed separately by the sheet
             pendingAction = if (nextTurnAction in nonBlockingActions) null else nextTurnAction
-            // A blocking action (pick a tech, a construction...) turns the button orange and says what the tap opens
-            if (pendingAction != null) label.setText("Before ending: [${nextTurnAction.getText(worldScreen).tr()}]".tr())
+            // A blocking action (pick a tech, a construction...) turns the button orange and says what the tap opens:
+            // the action name as the main line, "Before ending the turn" as the small line under it (a single line was cut)
             val tint = when {
                 pendingAction != null -> colorFromRGB(160, 90, 15)
                 nextTurnAction == NextTurnAction.Working || nextTurnAction == NextTurnAction.Waiting -> colorFromRGB(37, 43, 62)
@@ -91,7 +91,7 @@ class NextTurnButton(
             // Long action names ("Pick construction", "Waiting for other players...") must still fit the sheet
             val text = label.text.toString()
             label.setFontSize(if (text.length > 16) 17 else 22)
-            label.setEllipsis("…")
+            label.setEllipsis("...")  // the font has no single ellipsis glyph
             labelCell.width(minOf(label.prefWidth, worldScreen.stage.width - 215f)).minWidth(0f)
         }
         val iconName = if (worldScreen.portraitLayout && pendingAction != null) "OtherIcons/ExclamationMark" else nextTurnAction.icon
@@ -103,7 +103,9 @@ class NextTurnButton(
         else
             iconCell.clearActor()
 
-        nextTurnAction.getSubText(worldScreen)?.let {
+        val subText = if (worldScreen.portraitLayout && pendingAction != null) "Before ending the turn"
+            else nextTurnAction.getSubText(worldScreen)
+        subText?.let {
             unitsDueLabel.setText(it.tr())
             unitsDueCell.setActor(unitsDueLabel)
         } ?: unitsDueCell.clearActor()
