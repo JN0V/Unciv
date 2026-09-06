@@ -12,12 +12,14 @@ import com.unciv.models.ruleset.PerpetualConstruction
 import com.unciv.ui.components.extensions.getTurnsToConstructionString
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.IConstruction
+import com.unciv.models.ruleset.IRulesetObject
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.colorFromRGB
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.input.clearActivationActions
 import com.unciv.ui.components.input.ActivationTypes
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -72,6 +74,9 @@ class CityScreenPortrait(
     private val rowColor = Color(0.2f, 0.3f, 0.5f, 0.55f)
     private val rowColorDim = Color(0.15f, 0.17f, 0.24f, 0.8f)
     private val accentGreen = colorFromRGB(31, 126, 55)
+    /** The available construction whose row is unfolded (description, Civilopedia link, Build button):
+     *  a newcomer reads what it does before queueing it; a second tap on the row (or the button) adds it */
+    private var expandedConstruction: String? = null
 
     init {
         setFillParent(true)
@@ -335,27 +340,43 @@ class CityScreenPortrait(
     private fun availableRow(dto: ConstructionButtonDTO): Table {
         val construction = dto.construction
         val blocked = dto.rejectionReason != null
+        val expanded = construction.name == expandedConstruction
         val row = rowTable(dim = blocked)
-        row.add(ImageGetter.getConstructionPortrait(construction.name, 40f).apply { if (blocked) color.a = 0.5f }).padRight(12f)
+        if (expanded) row.background = BaseScreen.skinStrings.getUiBackground("CityScreen/Portrait/RowExpanded", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, Color(0.2f, 0.38f, 0.62f, 0.7f))
+
+        val title = Table()
+        title.add(ImageGetter.getConstructionPortrait(construction.name, 40f).apply { if (blocked) color.a = 0.5f }).padRight(12f)
         val text = Table().left()
         val stats = if (construction is Building) " " + Stat.entries.filter { cityView.isStatRelated(it, construction) }.joinToString("") { it.character.toString() } else ""
         text.add((construction.name.tr(hideIcons = true) + stats).toLabel(fontSize = 17, fontColor = if (blocked) Color.LIGHT_GRAY else Color.WHITE, hideIcons = true).apply { setEllipsis("…") }).minWidth(0f).left().row()
         val subtitle = if (blocked && dto.rejectionReason != null) dto.rejectionReason.errorMessage.tr() else dto.buttonText
         text.add(subtitle.toLabel(fontSize = 13, fontColor = if (blocked) colorFromRGB(255, 138, 128) else Color.LIGHT_GRAY).apply { wrap = true })
             .width(screenStage.width - 170f).left()
-        row.add(text).growX().minWidth(0f)
+        title.add(text).growX().minWidth(0f)
         val trailing = if (blocked) ImageGetter.getImage("OtherIcons/LockSmall").apply { color = Color.LIGHT_GRAY }
-            else ImageGetter.getImage("OtherIcons/New").apply { color = accentGreen }
-        row.add(trailing).size(24f).padLeft(6f).padRight(26f)  // room for the long-press indicator in the corner
+            else ImageGetter.getImage(if (expanded) "OtherIcons/Checkmark" else "OtherIcons/New").apply { color = accentGreen }
+        title.add(trailing).size(24f).padLeft(6f).padRight(26f)  // room for the long-press indicator in the corner
+        row.add(title).growX().minWidth(0f).row()
 
-        row.onClick {
+        fun addToQueue() {
             if (blocked) {
                 ToastPopup(dto.rejectionReason!!.errorMessage, cityScreen)
             } else if (constructionsTable.cannotAddConstructionToQueue(construction)) {
                 ToastPopup("Construction queue is full", cityScreen)
             } else {
+                expandedConstruction = null
                 constructionsTable.addConstructionToQueue(construction)
                 cityScreen.updateAsync()
+            }
+        }
+
+        if (expanded) row.add(constructionDetails(construction, blocked, ::addToQueue)).growX().padTop(6f).row()
+
+        row.onClick {
+            if (expanded) addToQueue()
+            else {
+                expandedConstruction = construction.name
+                updateContent()
             }
         }
         if (cityScreen.canCityBeChanged()) row.addContextMenu {
@@ -364,10 +385,62 @@ class CityScreenPortrait(
         return row
     }
 
+    /** What the classic screen shows in its "selected construction" box, trimmed for a phone: description, then a
+     *  Civilopedia link and the green Build button */
+    private fun constructionDetails(construction: IConstruction, blocked: Boolean, addToQueue: () -> Unit): Table {
+        val details = Table()
+        details.defaults().left()
+        val description = when (construction) {
+            is BaseUnit -> cityView.getUnitDescription(construction)
+            is Building -> cityView.getBuildingDescription(construction)
+            is PerpetualConstruction -> construction.description.tr()
+            else -> ""
+        }.lines().filter { it.isNotBlank() }.take(8).joinToString("\n")
+        if (description.isNotEmpty())
+            details.add(description.toLabel(fontSize = 14).apply { wrap = true }).width(screenStage.width - 60f).padBottom(4f).row()
+
+        val buttons = Table()
+        buttons.defaults().minHeight(44f).pad(3f)
+        val link = (construction as? IRulesetObject)?.makeLink() ?: ""
+        if (link.isNotEmpty()) {
+            val pediaButton = Button(BaseScreen.skin)
+            pediaButton.add(ImageGetter.getImage("OtherIcons/Question")).size(18f).padRight(6f)
+            pediaButton.add("Civilopedia".tr().toLabel(fontSize = 14))
+            pediaButton.onClickSuppressive { cityScreen.openCivilopedia(link) }
+            buttons.add(pediaButton).padRight(6f)
+        }
+        if (!blocked && cityScreen.canCityBeChanged()) {
+            val buildButton = Button(primaryStyle(BaseScreen.skin.get(Button.ButtonStyle::class.java)))
+            buildButton.add("Build [${construction.name}]".tr(hideIcons = true).toLabel(fontSize = 16).apply { setEllipsis("…") }).minWidth(0f).pad(4f, 12f, 4f, 12f)
+            buildButton.onClickSuppressive { addToQueue() }
+            buttons.add(buildButton).growX().minWidth(0f)
+        }
+        details.add(buttons).growX().row()
+        return details
+    }
+
+    /** Green "primary action" look for a button (same as the world screen sheet) */
+    private fun primaryStyle(base: Button.ButtonStyle): Button.ButtonStyle {
+        val upDrawable = BaseScreen.skinStrings.getUiBackground("CityScreen/Portrait/PrimaryButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, accentGreen)
+        val downDrawable = BaseScreen.skinStrings.getUiBackground("CityScreen/Portrait/PrimaryButtonPressed", BaseScreen.skinStrings.roundedEdgeRectangleShape, accentGreen.cpy().lerp(Color.BLACK, 0.3f))
+        return Button.ButtonStyle(base).apply { up = upDrawable; down = downDrawable; over = upDrawable; checked = upDrawable }
+    }
+
+    /** Mirrors [com.unciv.ui.components.tilegroups.CityTileGroup]'s "workable" state: the citizen icon on the map */
+    private fun isWorkable(tile: com.unciv.view.TileView): Boolean {
+        if (tile.owningCity()?.isSameCivAs(cityView) != true) return false
+        if (!cityView.isInRange(tile)) return false
+        if (tile.isWorked() && tile.getWorkingCity() != cityView) return false
+        if (tile.isCityCenter()) return false
+        if (tile.getTileStats(cityView.viewingCiv(), cityView).isEmpty()) return false
+        if (tile.isBlockaded()) return false
+        return tile.isLocked() || tile.isWorked() || !tile.providesYield()
+    }
+
     private fun updateTilesContent() {
         val tile = cityScreen.selectedTile
         if (tile == null) {
-            content.add("Tap a tile on the map to see what it yields and to work it".toLabel(fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) })
+            content.add("Tap a tile on the map to see what it yields and whether a citizen can work it".toLabel(fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) })
                 .width(screenStage.width - 32f).padTop(20f).row()
             return
         }
@@ -418,6 +491,26 @@ class CityScreenPortrait(
             else buyButton.disable()
             actions.add(buyButton).row()
         }
+        // Same cycle as a tap on the citizen icon of the map (CityScreen.tileWorkedIconOnClick), as a finger-sized button
+        if (cityScreen.canChangeState && !cityView.isPuppet() && isWorkable(tile)) {
+            val assign = !tile.providesYield()
+            val noFreeCitizen = assign && cityView.getFreePopulation() <= 0
+            val workButton = Button(if (noFreeCitizen) BaseScreen.skin.get(Button.ButtonStyle::class.java) else primaryStyle(BaseScreen.skin.get(Button.ButtonStyle::class.java)))
+            workButton.add(ImageGetter.getImage(if (assign) "TileIcons/NotWorked" else "TileIcons/Worked")).size(22f).padRight(8f)
+            workButton.add((if (assign) "Work this tile" else "Stop working this tile").tr().toLabel(fontSize = 16))
+            if (noFreeCitizen) workButton.disable()
+            else workButton.onClick {
+                if (assign) {
+                    cityView.tryWorkTile(tile)
+                    cityScreen.game.settings.addCompletedTutorialTask("Reassign worked tiles")
+                } else cityView.tryStopWorkingTile(tile)
+                cityView.updateCityStats()
+                cityScreen.updateAsync()
+            }
+            actions.add(workButton).row()
+            if (noFreeCitizen)
+                actions.add("No free citizen to assign".toLabel(fontSize = 14, fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) }).row()
+        }
         if (worked && cityScreen.canChangeState) {
             val locked = tile.isLocked()
             val lockButton = Button(BaseScreen.skin)
@@ -430,7 +523,7 @@ class CityScreenPortrait(
             actions.add(lockButton).row()
         }
         if (actions.hasChildren()) content.add(actions).growX().padTop(8f).row()
-        content.add("Tap a worked tile on the map to free it, an unworked one to assign a citizen".toLabel(fontSize = 14, fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) })
+        content.add("The button above assigns a citizen to this tile or frees it; tapping the citizen icon on the map does the same".toLabel(fontSize = 14, fontColor = Color.LIGHT_GRAY).apply { wrap = true; setAlignment(Align.center) })
             .width(screenStage.width - 32f).padTop(10f).row()
     }
 
