@@ -90,6 +90,14 @@ class TechPickerPortraitScreen(
         val subtitle = "{Science}: +$science${Fonts.science}" + (if (current != null) "  ·  {Current research}: {$current}" else "")
         titles.add(subtitle.toLabel(fontSize = 15, fontColor = muted, alignment = Align.left, hideIcons = true).apply { wrap = true }).growX().left()
         header.add(titles).growX().left()
+        // The classic tree stays one tap away (and comes back by itself when the phone turns to landscape)
+        val treeButton = Table()
+        treeButton.background = bg("Tree", rowColor)
+        treeButton.touchable = Touchable.enabled
+        treeButton.pad(6f, 12f, 6f, 12f)
+        treeButton.add("Tree".toLabel(fontSize = 15))
+        treeButton.onClick { game.replaceCurrentScreen { TechPickerScreen(civInfo, selected) } }
+        header.add(treeButton).padLeft(8f)
         return header
     }
 
@@ -215,5 +223,6 @@ class TechPickerPortraitScreen(
     }
 
     override fun getCivilopediaRuleset() = ruleset
-    override fun recreate(): BaseScreen = TechPickerPortraitScreen(civInfo, selected)
+    /** On a rotation the factory decides again: landscape gets the tree back */
+    override fun recreate(): BaseScreen = TechPickerScreen.create(civInfo, selected)
 }

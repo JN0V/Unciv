@@ -218,5 +218,5 @@ class ImprovementPickerPortraitScreen(
     }
 
     override fun getCivilopediaRuleset() = ruleset
-    override fun recreate(): BaseScreen = ImprovementPickerPortraitScreen(tile, unit, onAccept)
+    override fun recreate(): BaseScreen = ImprovementPickerScreen.create(tile, unit, onAccept)
 }

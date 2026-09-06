@@ -229,5 +229,5 @@ class PolicyPickerPortraitScreen(
 
     override fun getCivilopediaRuleset() = ruleset
 
-    override fun recreate(): BaseScreen = PolicyPickerPortraitScreen(viewingCiv, canChangeState, selectedPolicy?.name)
+    override fun recreate(): BaseScreen = PolicyPickerScreen.create(viewingCiv, canChangeState, selectedPolicy?.name)
 }
