@@ -1,6 +1,7 @@
 package com.unciv.app
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.view.View
@@ -86,8 +87,10 @@ open class AndroidLauncher : AndroidApplication() {
         }
 
         val cutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
-        // If settings.androidCutout is false, padding is applied
-        if (!settings.androidCutout) {
+        // The window is padded away from the cutout unless the phone layout is on: it paints its own band under the
+        // cutout (see BaseScreen.applySafeInset), while the classic layout has nothing to keep its top bar out of it
+        val portraitLayout = settings.usePortraitLayout(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
+        if (!settings.androidCutout || !portraitLayout) {
             view.setPadding(cutoutInsets.left, cutoutInsets.top, cutoutInsets.right, cutoutInsets.bottom)
             Display.cutoutInsetTop = 0
         } else {

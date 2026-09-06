@@ -132,7 +132,7 @@ abstract class BaseScreen : Screen {
 
     /** Pixels reserved at the top for a display cutout (portrait phone layout only); the band shows [clearColor] */
     private fun topSafeInsetPixels(width: Int, height: Int): Int =
-        if (game.settings.usePortraitLayout(height > width)) maxOf(Gdx.graphics.safeInsetTop, com.unciv.utils.Display.cutoutInsetTop) else 0
+        if (game.settings.usePortraitLayout(height > width)) com.unciv.utils.Display.cutoutInsetTop else 0
 
     /** Sizes the viewport so the whole stage sits below the display cutout */
     private fun applySafeInset(width: Int, height: Int) {

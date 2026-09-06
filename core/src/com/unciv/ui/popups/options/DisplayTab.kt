@@ -52,8 +52,11 @@ internal class DisplayTab(
         addSelectBox("Layout", settings::layoutMode, GameSettings.LayoutMode.entries) { _, _ ->
             reloadWorldAndOptions()
         }
-        addNotificationScrollSelect()
-        addCheckbox("Show minimap", settings::showMinimap, updateWorld = true)
+        // The phone layout keeps its own minimap and notification preferences (see GameSettings)
+        val stage = optionsPopup.stageToShowOn
+        val portraitLayout = settings.usePortraitLayout(stage.viewport.screenHeight > stage.viewport.screenWidth)
+        addNotificationScrollSelect(portraitLayout)
+        addCheckbox("Show minimap", if (portraitLayout) settings::showMinimapPortrait else settings::showMinimap, updateWorld = true)
         addCheckbox("Show tutorials", settings.showTutorials, updateWorld = true, newRow = false) { settings.showTutorials = it }
         addResetTutorials()
         addCheckbox("Show long-press indicators", settings.showLongPressIndicators.toBoolean()) {
@@ -198,8 +201,10 @@ internal class DisplayTab(
         add(resetTutorialsButton).center().row()
     }
 
-    private fun addNotificationScrollSelect() {
-        addEnumAsStringSelectBox("Notifications on world screen", settings::notificationScroll, NotificationsScroll.UserSetting.entries) {
+    private fun addNotificationScrollSelect(portraitLayout: Boolean) {
+        val property = if (portraitLayout) settings::notificationScrollPortrait else settings::notificationScroll
+        addEnumAsStringSelectBox("Notifications on world screen", property, NotificationsScroll.UserSetting.entries) {
+            if (portraitLayout) NotificationsScroll.resetPortraitSessionSetting()
             GUI.setUpdateWorldOnNextRender()
         }
     }

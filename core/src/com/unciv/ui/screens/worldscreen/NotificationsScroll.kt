@@ -48,11 +48,13 @@ class NotificationsScroll(
         companion object { @Pure fun default() = Visible }
     }
 
-    private companion object {
+    companion object {
         /** Hash of the notification list the player folded away (swipe, bell or Hide), kept across WorldScreen instances */
-        var foldedNotificationsHash = 0
+        private var foldedNotificationsHash = 0
         /** Phone: the Hidden/Visible toggle for this session, see [settingStorage] */
-        var portraitSettingInMemory: String? = null
+        private var portraitSettingInMemory: String? = null
+        /** The options changed the stored phone setting: forget the session toggle so the change applies at once */
+        fun resetPortraitSessionSetting() { portraitSettingInMemory = null }
         /** Scale the entire ScrollPane by this factor (classic layout; portrait uses [NotificationsScroll.scaleFactor]) */
         const val classicScaleFactor = 0.5f
         const val portraitScaleFactor = 0.62f
