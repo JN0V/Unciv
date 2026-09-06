@@ -61,7 +61,8 @@ class CityScreenPortrait(
     private val contentScroll = AutoScrollPane(content)
     private val buyButtonFactory = BuyButtonFactory(cityScreen)
 
-    var activeTab = if (cityScreen.isSpying) Tab.Tiles else Tab.Build
+    /** Opens on the Tiles tab when the screen is created with a tile already selected (spying, or after a tile purchase) */
+    var activeTab = if (cityScreen.isSpying || cityScreen.selectedTile != null) Tab.Tiles else Tab.Build
         private set
     /** Y (stage coordinates) of the map area's bottom edge, so the [CityScreen] can size its map pane */
     val mapBottom: Float get() = screenStage.height - headerHeight - mapHeight
