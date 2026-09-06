@@ -2,6 +2,9 @@ package com.unciv.ui.screens.worldscreen
 
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.scenes.scene2d.ui.Table
@@ -564,6 +567,14 @@ class WorldScreen(
         popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); afterChoice() }).row()
         popup.addCloseButton("Got it")
         popup.open()
+        // Only vertical scrolling: the vertical scrollbar narrows the visible area, which otherwise lets the text slide sideways
+        findScrollPane(popup)?.setScrollingDisabled(true, false)
+    }
+
+    private fun findScrollPane(actor: Actor): ScrollPane? {
+        if (actor is ScrollPane) return actor
+        if (actor is Group) for (child in actor.children) findScrollPane(child)?.let { return it }
+        return null
     }
 
     /** A task that carries real explanations (more than title + how-to) opens its help once by itself when it first appears,
