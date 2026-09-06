@@ -921,6 +921,13 @@ class WorldScreen(
                 game.pushScreen { com.unciv.ui.screens.pickerscreens.ImprovementPickerScreen.create(worker.getTile(), worker) {} }
             }
             "overview" -> openEmpireOverview()
+            "overview:Stats" -> openEmpireOverview(EmpireOverviewCategories.Stats)
+            "overview:Units" -> openEmpireOverview(EmpireOverviewCategories.Units)
+            "overview:Resources" -> openEmpireOverview(EmpireOverviewCategories.Resources)
+            "overview:Politics" -> openEmpireOverview(EmpireOverviewCategories.Politics)
+            "overview:Wonders" -> openEmpireOverview(EmpireOverviewCategories.Wonders)
+            "overview:Notifications" -> openEmpireOverview(EmpireOverviewCategories.Notifications)
+            "overview:Trades" -> openEmpireOverview(EmpireOverviewCategories.Trades)
         }
     }
 

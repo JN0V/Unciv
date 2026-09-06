@@ -27,7 +27,8 @@ enum class EmpireOverviewCategories(
     },
     Stats("StatIcons/Gold", 'S', Align.top) {
         override fun createTab(viewingPlayer: CivView, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?) =
-                StatsOverviewTab(viewingPlayer, overviewScreen)
+                if (overviewScreen.portraitLayout) StatsCardsOverviewTab(viewingPlayer, overviewScreen)
+                else StatsOverviewTab(viewingPlayer, overviewScreen)
         override fun showDisabled(viewingPlayer: CivView) = viewingPlayer.isSpectator()
     },
     Trades("StatIcons/Acquire", 'T', Align.top) {
@@ -41,7 +42,8 @@ enum class EmpireOverviewCategories(
     },
     Units("OtherIcons/Shield", 'U', Align.topLeft) {
         override fun createTab(viewingPlayer: CivView, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?) =
-                UnitOverviewTab(viewingPlayer, overviewScreen, persistedData)
+                if (overviewScreen.portraitLayout) UnitCardsOverviewTab(viewingPlayer, overviewScreen, persistedData)
+                else UnitOverviewTab(viewingPlayer, overviewScreen, persistedData)
         override fun showDisabled(viewingPlayer: CivView) = viewingPlayer.getCiv().units.getCivUnits().none()
         override fun getPersistDataClass() = UnitOverviewTab.UnitTabPersistableData::class.java
     },
@@ -68,7 +70,8 @@ enum class EmpireOverviewCategories(
     },
     Wonders("OtherIcons/Wonders", 'W', Align.top) {
         override fun createTab(viewingPlayer: CivView, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?) =
-                WonderOverviewTab(viewingPlayer, overviewScreen)
+                if (overviewScreen.portraitLayout) WonderCardsOverviewTab(viewingPlayer, overviewScreen)
+                else WonderOverviewTab(viewingPlayer, overviewScreen)
         override fun showDisabled(viewingPlayer: CivView) = (viewingPlayer.getCiv().naturalWonders.isEmpty() && viewingPlayer.getCiv().cities.isEmpty())
     },
     Notifications("OtherIcons/Notifications", 'N', Align.top) {
