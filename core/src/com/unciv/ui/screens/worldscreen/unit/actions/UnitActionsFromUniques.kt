@@ -494,7 +494,7 @@ object UnitActionsFromUniques {
         return sequenceOf(UnitAction(UnitActionType.ConstructImprovement, useFrequency,
             isCurrentAction = tile.hasImprovementInProgress(),
             action = {
-                GUI.pushScreen{ ImprovementPickerScreen(tile, unit) {
+                GUI.pushScreen{ ImprovementPickerScreen.create(tile, unit) {
                     if (GUI.getSettings().autoUnitCycle)
                         GUI.getWorldScreen().switchToNextUnit()
                 } }

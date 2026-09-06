@@ -1,6 +1,8 @@
 package com.unciv.ui.screens.pickerscreens
 
 import com.badlogic.gdx.Gdx
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.UncivGame
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.Vector2
@@ -41,6 +43,14 @@ class TechPickerScreen(
     internal val civInfo: Civilization,
     centerOnTech: Technology? = null,
 ) : PickerScreen() {
+
+    companion object {
+        /** The phone list or the classic tree, following the layout setting */
+        fun create(civInfo: Civilization, centerOnTech: Technology? = null): BaseScreen =
+            if (UncivGame.Current.settings.usePortraitLayout(Gdx.graphics.height > Gdx.graphics.width))
+                TechPickerPortraitScreen(civInfo, centerOnTech)
+            else TechPickerScreen(civInfo, centerOnTech)
+    }
 
     private val freeTechPick: Boolean = civInfo.tech.freeTechs != 0
     private val ruleset = civInfo.gameInfo.ruleset

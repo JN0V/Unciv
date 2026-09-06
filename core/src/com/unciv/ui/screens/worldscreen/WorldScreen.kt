@@ -37,6 +37,8 @@ import com.unciv.ui.components.input.KeyShortcutDispatcherVeto
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.KeyboardPanningListener
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.clearActivationActions
+import com.unciv.ui.components.input.ActivationTypes
 import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AuthPopup
@@ -565,7 +567,8 @@ class WorldScreen(
     internal fun openTutorialTaskPopup(tutorialTask: Event, onScreen: BaseScreen = this, afterChoice: () -> Unit = { shouldUpdate = true }) {
         val popup = Popup(onScreen)
         popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); afterChoice() }).row()
-        popup.addCloseButton("Got it")
+        if (tutorialTask.choices.isEmpty()) popup.addCloseButton("Got it")  // a choice ("Got it") already closes it
+        else popup.clickBehindToClose = true
         popup.open()
         // Only vertical scrolling: the vertical scrollbar narrows the visible area, which otherwise lets the text slide sideways
         findScrollPane(popup)?.setScrollingDisabled(true, false)
@@ -642,6 +645,7 @@ class WorldScreen(
         }
         tutorialTaskTable.pack()
         positionTutorialTaskTable()
+        tutorialTaskTable.clearActivationActions(ActivationTypes.Tap)  // set below on every update: never stack handlers (opened N popups)
         tutorialTaskTable.onClick {
             if (portraitLayout && !UncivGame.Current.isTutorialTaskCollapsed) {
                 openTutorialTaskPopup(tutorialTask)
@@ -868,7 +872,14 @@ class WorldScreen(
         }
     }
 
+    private var hadOpenPopups = false
+
     override fun render(delta: Float) {
+        // A popup just closed (briefing, tech discovered...): refresh, so the next tutorial help can open in its place
+        val hasPopups = hasOpenPopups()
+        if (hadOpenPopups && !hasPopups) shouldUpdate = true
+        hadOpenPopups = hasPopups
+
         //  This is so that updates happen in the MAIN THREAD, where there is a GL Context,
         //    otherwise images will not load properly!
         if (shouldUpdate && resizeDeferTimer == null) {
@@ -905,7 +916,10 @@ class WorldScreen(
                 game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView, selectedGameView.getForeignCivView(other)) }
             }
             "policies" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.PolicyPickerScreen.create(selectedCiv, canChangeState) }
-            "tech" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.TechPickerScreen(selectedCiv) }
+            "tech" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.TechPickerScreen.create(selectedCiv) }
+            "improve" -> selectedCiv.units.getCivUnits().firstOrNull { it.cache.hasUniqueToBuildImprovements }?.let { worker ->
+                game.pushScreen { com.unciv.ui.screens.pickerscreens.ImprovementPickerScreen.create(worker.getTile(), worker) {} }
+            }
             "overview" -> openEmpireOverview()
         }
     }

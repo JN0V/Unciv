@@ -75,7 +75,7 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         pickTechButton.defaults().pad(if (compact) 10f else 20f)
         pickTechButton.add(pickTechLabel)
         techButtonHolder.onActivation(UncivSound.Paper, KeyboardBinding.TechnologyTree) {
-            game.pushScreen{ TechPickerScreen(viewingCiv.getCiv()) }
+            game.pushScreen{ TechPickerScreen.create(viewingCiv.getCiv()) }
         }
 
         undoButton.add(ImageGetter.getImage("OtherIcons/Undo")).size(iconSize).pad(iconPad)

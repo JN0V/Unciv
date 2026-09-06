@@ -121,7 +121,7 @@ open class Popup(
      *
      *  Automatically set when [addCloseButton] is called but may be changed back or enabled without such a button.
      */
-    protected var clickBehindToClose = false
+    var clickBehindToClose = false
 
     /** Unlike [closeListeners] this is only fired on "click-behind" closing */
     protected var onCloseCallback: (() -> Unit)? = null

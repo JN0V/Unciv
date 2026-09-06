@@ -8,6 +8,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.UncivGame
+import com.badlogic.gdx.Gdx
 import com.unciv.GUI
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.tile.ImprovementBuildingProblem
@@ -42,6 +45,12 @@ class ImprovementPickerScreen(
 ) : PickerScreen() {
 
     companion object {
+        /** The phone list or the classic screen, following the layout setting */
+        fun create(tile: Tile, unit: MapUnit, onAccept: () -> Unit): BaseScreen =
+            if (UncivGame.Current.settings.usePortraitLayout(Gdx.graphics.height > Gdx.graphics.width))
+                ImprovementPickerPortraitScreen(tile, unit, onAccept)
+            else ImprovementPickerScreen(tile, unit, onAccept)
+
         /** Return true if we can report improvements associated with the [problems] (or there are no problems for it at all). */
         fun canReport(problems: Collection<ImprovementBuildingProblem>) = problems.all { it.reportable }
     }

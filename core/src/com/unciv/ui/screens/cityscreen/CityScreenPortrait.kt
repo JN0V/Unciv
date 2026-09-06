@@ -18,6 +18,8 @@ import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.colorFromRGB
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.clearActivationActions
+import com.unciv.ui.components.input.ActivationTypes
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
@@ -117,7 +119,7 @@ class CityScreenPortrait(
         if (hash != taskCardHash) {
             taskCardHash = hash
             taskCard.clear()
-            taskCard.clearListeners()
+            taskCard.clearActivationActions(ActivationTypes.Tap)
             if (collapsed) {
                 // Folded: a small reminder icon, tap to unfold
                 taskCard.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(26f, 26f) }).pad(5f)
