@@ -83,6 +83,11 @@ object ScenarioBuilder {
                 for (civ in game.civilizations.filter { !it.isBarbarian && !it.isSpectator() }) {
                     val cities = civ.cities.joinToString { "${it.name}@${it.location}(pop ${it.population.population}, ${it.cityConstructions.getBuiltBuildings().map { b -> b.name }})" }
                     val units = civ.units.getCivUnits().groupBy { it.name }.map { "${it.value.size}x${it.key}" }
+                    if (civ == human) for (city in civ.cities) {
+                        val near = city.getCenterTile().getTilesInDistance(2).filter { it.resource != null }
+                            .joinToString { "${it.resource}@${it.aerialDistanceTo(city.getCenterTile())}" }
+                        println("  resources within 2 of ${city.name}: $near")
+                    }
                     val dist = if (civ != human && civ.cities.isNotEmpty() && human.cities.isNotEmpty())
                         " dist=" + civ.getCapital()!!.getCenterTile().aerialDistanceTo(human.getCapital()!!.getCenterTile()) else ""
                     println("  ${civ.civID} [${civ.playerType}]${if (civ.isCityState) " city-state" else ""} techs=${civ.tech.techsResearched.size} cities=[$cities] units=$units war=${civ.diplomacy.values.filter { it.diplomaticStatus == com.unciv.logic.civilization.diplomacy.DiplomaticStatus.War }.map { it.otherCivName }}$dist")
@@ -101,6 +106,27 @@ object ScenarioBuilder {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Puts [resource] on a land tile next to [center] (distance 1, else 2), reshaping the terrain when no tile fits:
+     *  [baseTerrain] (or any) with a Hill feature when [hill], flat otherwise. Returns the tile. */
+    private fun GameInfo.ensureResource(center: Tile, resource: String, baseTerrain: String?, hill: Boolean): Tile {
+        val candidates = center.getTilesInDistance(2)
+            .filter { it != center && it.isLand && it.resource == null && it.naturalWonder == null }
+            .sortedBy { it.aerialDistanceTo(center) }
+        fun Tile.fits() = (baseTerrain == null || this.baseTerrain == baseTerrain) && isHill() == hill && terrainFeatures.all { it == Constants.hill }
+        // Next to the city first (the player sees it at once and the city works it), reshaping if needed
+        val adjacent = candidates.filter { it.aerialDistanceTo(center) == 1 }
+        val tile = adjacent.firstOrNull { it.fits() }
+            ?: adjacent.firstOrNull { it.isHill() == hill }
+            ?: adjacent.firstOrNull()
+            ?: candidates.firstOrNull { it.fits() }
+            ?: candidates.first()
+        if (baseTerrain != null && tile.baseTerrain != baseTerrain) tile.setBaseTerrain(ruleset.terrains[baseTerrain]!!)
+        val features: List<String> = if (hill) arrayListOf(Constants.hill) else ArrayList()  // a plain ArrayList: singleton lists do not survive the save
+        if (tile.terrainFeatures != features) tile.setTerrainFeatures(features)
+        tile.setTileResource(ruleset.tileResources[resource]!!, majorDeposit = true)
+        return tile
+    }
 
     private fun newGame(
         radius: Int,
@@ -199,10 +225,10 @@ object ScenarioBuilder {
         city.cityConstructions.addBuilding("Monument")
         civ.give("Pottery", "Mining")
         val center = city.getCenterTile()
-        val ring = center.getTilesInDistance(2).filter { it != center && it.isLand && it.resource == null }.toList()
-        ring.firstOrNull { it.isFlatLand() && it.baseTerrain == Constants.grassland }?.setTileResource("Wheat")
-        ring.firstOrNull { it.isHill() && it.resource == null }?.setTileResource("Iron")
-        ring.firstOrNull { it.isFlatLand() && it.resource == null && it.baseTerrain == Constants.plains }?.setTileResource("Cattle")
+        // The briefing promises Wheat, Cattle and Iron next to the city: put them there whatever the map looks like
+        game.ensureResource(center, "Wheat", Constants.plains, hill = false)
+        game.ensureResource(center, "Cattle", Constants.grassland, hill = false)
+        game.ensureResource(center, "Iron", null, hill = true)
         civ.spawn("Worker", center)
         city.reassignAllPopulation()
         game.brief(civ, "S2 Briefing")
