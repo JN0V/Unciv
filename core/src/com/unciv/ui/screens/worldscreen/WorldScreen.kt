@@ -37,6 +37,7 @@ import com.unciv.ui.components.input.KeyShortcutDispatcherVeto
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.KeyboardPanningListener
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AuthPopup
 import com.unciv.ui.popups.Popup
@@ -589,7 +590,7 @@ class WorldScreen(
     internal fun tutorialTaskCollapseButton(onCollapse: () -> Unit = { shouldUpdate = true }): Actor {
         val button = ImageGetter.getImage("OtherIcons/Close").apply { setSize(18f, 18f) }.surroundWithCircle(30f, color = Color(0.2f, 0.3f, 0.5f, 1f))
         button.touchable = Touchable.enabled
-        button.onClick {
+        button.onClickSuppressive {  // suppressive: the card underneath must not also open its help popup
             UncivGame.Current.isTutorialTaskCollapsed = true
             onCollapse()
         }
