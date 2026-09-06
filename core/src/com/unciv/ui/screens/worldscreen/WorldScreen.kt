@@ -908,7 +908,7 @@ class WorldScreen(
             "diplomacy-detail" -> viewingCiv.diplomacyFunctions.getKnownCivsSorted().firstOrNull()?.let { other ->
                 game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView, selectedGameView.getForeignCivView(other)) }
             }
-            "policies" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.PolicyPickerScreen(selectedCiv, canChangeState) }
+            "policies" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.PolicyPickerScreen.create(selectedCiv, canChangeState) }
             "tech" -> game.pushScreen { com.unciv.ui.screens.pickerscreens.TechPickerScreen(selectedCiv) }
             "overview" -> openEmpireOverview()
         }

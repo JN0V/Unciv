@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.pickerscreens
 
 import com.badlogic.gdx.Gdx
+import com.unciv.UncivGame
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -150,6 +151,14 @@ class PolicyPickerScreen(
     val canChangeState: Boolean,
     select: String? = null
 ) : PickerScreen(), RecreateOnResize {
+
+    companion object {
+        /** The phone list version or the classic tree, following the layout setting */
+        fun create(viewingCiv: Civilization, canChangeState: Boolean, select: String? = null): BaseScreen =
+            if (UncivGame.Current.settings.usePortraitLayout(Gdx.graphics.height > Gdx.graphics.width))
+                PolicyPickerPortraitScreen(viewingCiv, canChangeState, select)
+            else PolicyPickerScreen(viewingCiv, canChangeState, select)
+    }
 
     object Sizes {
         const val paddingVertical = 10f

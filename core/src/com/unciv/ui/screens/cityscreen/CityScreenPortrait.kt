@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.unciv.ui.components.widgets.PortraitWidgets
 import com.badlogic.gdx.math.Vector2
 import com.unciv.ui.screens.worldscreen.RenderEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -159,10 +160,7 @@ class CityScreenPortrait(
         header.clear()
         val civView = cityView.owningCiv()
 
-        val backButton = Button(BaseScreen.skin)
-        backButton.add(ImageGetter.getImage("OtherIcons/BackArrow")).size(22f).pad(9f)
-        backButton.onClick { cityScreen.exit() }
-        header.add(backButton).size(44f).padRight(8f)
+        header.add(PortraitWidgets.backButton { cityScreen.exit() }).size(44f).padRight(8f)
 
         val nameTable = Table()
         val nameRow = Table()

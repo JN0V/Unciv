@@ -210,7 +210,7 @@ class PolicyAction(
     private val select: String? = null
 ) : NotificationAction {
     override fun execute(worldScreen: WorldScreen) {
-        worldScreen.game.pushScreen { PolicyPickerScreen(worldScreen.selectedCiv, worldScreen.canChangeState, select) }
+        worldScreen.game.pushScreen { PolicyPickerScreen.create(worldScreen.selectedCiv, worldScreen.canChangeState, select) }
     }
 }
 

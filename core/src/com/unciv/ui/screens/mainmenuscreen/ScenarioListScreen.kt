@@ -14,6 +14,7 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.widgets.AutoScrollPane
+import com.unciv.ui.components.widgets.PortraitWidgets
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.LoadingPopup
 import com.unciv.ui.popups.Popup
@@ -93,10 +94,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         header.background = bg("Header", panelColor)
         header.pad(10f, 12f, 10f, 12f)
 
-        val backButton = Button(skin)
-        backButton.add(ImageGetter.getImage("OtherIcons/BackArrow")).size(22f).pad(9f)
-        backButton.onActivation { game.popScreen() }
-        header.add(backButton).padRight(12f)
+        header.add(PortraitWidgets.backButton { game.popScreen() }).padRight(12f)
 
         val titles = Table()
         titles.add("Discovery".toLabel(fontSize = 24, alignment = Align.left)).left().row()
