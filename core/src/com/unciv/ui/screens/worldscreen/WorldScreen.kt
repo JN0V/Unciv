@@ -914,6 +914,16 @@ class WorldScreen(
             "city" -> viewingCiv.cities.firstOrNull()?.let { city ->
                 game.pushScreen { CityScreen(selectedGameView.getCityView(city)) }
             }
+            "city:build" -> viewingCiv.cities.firstOrNull()?.let { city ->
+                val screen = CityScreen(selectedGameView.getCityView(city))
+                game.pushScreen { screen }
+                screen.debugUnfoldFirstConstruction()
+            }
+            "city:tile" -> viewingCiv.cities.firstOrNull()?.let { city ->
+                val cityView = selectedGameView.getCityView(city)
+                val tile = cityView.getTiles().firstOrNull { !it.isCityCenter() && !it.isWorked() && cityView.isInRange(it) }
+                game.pushScreen { CityScreen(cityView, initSelectedTile = tile) }
+            }
             "diplomacy" -> game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView) }
             "diplomacy-detail" -> viewingCiv.diplomacyFunctions.getKnownCivsSorted().firstOrNull()?.let { other ->
                 game.pushScreen { com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen(selectedGameView.civView, selectedGameView.getForeignCivView(other)) }

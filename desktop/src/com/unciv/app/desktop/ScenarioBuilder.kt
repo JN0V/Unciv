@@ -84,8 +84,18 @@ object ScenarioBuilder {
                     val cities = civ.cities.joinToString { "${it.name}@${it.location}(pop ${it.population.population}, ${it.cityConstructions.getBuiltBuildings().map { b -> b.name }})" }
                     val units = civ.units.getCivUnits().groupBy { it.name }.map { "${it.value.size}x${it.key}" }
                     if (civ == human) for (city in civ.cities) {
+                        // For each resource: is it visible to the human (its revealedBy tech known)? A hidden one
+                        // means the briefing promises a tile the player cannot see.
                         val near = city.getCenterTile().getTilesInDistance(2).filter { it.resource != null }
-                            .joinToString { "${it.resource}@${it.aerialDistanceTo(city.getCenterTile())}" }
+                            .joinToString { tile ->
+                                val revealedBy = tile.tileResource?.revealedBy
+                                val visibility = when {
+                                    revealedBy == null -> "visible"
+                                    human.tech.isResearched(revealedBy) -> "visible ($revealedBy known)"
+                                    else -> "HIDDEN (needs $revealedBy)"
+                                }
+                                "${tile.resource}@${tile.aerialDistanceTo(city.getCenterTile())} $visibility"
+                            }
                         println("  resources within 2 of ${city.name}: $near")
                     }
                     val dist = if (civ != human && civ.cities.isNotEmpty() && human.cities.isNotEmpty())

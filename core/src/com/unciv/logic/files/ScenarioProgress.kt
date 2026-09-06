@@ -12,6 +12,10 @@ object ScenarioProgress {
     /** The scenario files (path and modification time) the cached [scenarioGameIds] were read from */
     private var scenarioGameIdsKey: List<Pair<String, Long>>? = null
     private var scenarioGameIds: Set<String> = emptySet()
+    private var lastFileCheck = 0L
+    /** The scenario folders are listed again at most this often: [isScenarioGame] sits behind every
+     *  `<if tutorial [x] is completed>` conditional, so it must not touch the file system each time */
+    private const val fileCheckIntervalMillis = 5000L
 
     /** gameIds of the scenarios shipped by installed mods. The previews are re-read only when the list of scenario
      *  files changes (a mod installed or updated from the mod manager during the session) - a rare, small read.
@@ -19,6 +23,9 @@ object ScenarioProgress {
     @Synchronized
     fun getScenarioGameIds(): Set<String> {
         if (!UncivGame.isCurrentInitialized() || !UncivGame.Current.isFilesInitialized()) return emptySet()
+        val now = System.currentTimeMillis()
+        if (scenarioGameIdsKey != null && now - lastFileCheck < fileCheckIntervalMillis) return scenarioGameIds
+        lastFileCheck = now
         val files = UncivGame.Current.files
         val scenarioFiles = try { files.getScenarioFiles().map { (file, _) -> file }.toList() } catch (_: Exception) { return scenarioGameIds }
         val key = scenarioFiles.map { it.path() to it.lastModified() }

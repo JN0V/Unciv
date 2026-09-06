@@ -66,6 +66,8 @@ class CityScreen(
     /** Phone layout: header + map + tabs, see [CityScreenPortrait] */
     private val portraitLayout = game.settings.usePortraitLayout(isPortrait())
     private var portrait: CityScreenPortrait? = null
+    /** Development aid for screenshots (see [WorldScreen.debugAction]) */
+    fun debugUnfoldFirstConstruction() = portrait?.debugUnfoldFirstConstruction()
 
     internal val isSpying = cityView.isEspionageEnabled() && !cityView.isOwnedByViewer() && !viewingCiv.isSpectator()
 

@@ -419,6 +419,12 @@ class CityScreenPortrait(
         return details
     }
 
+    /** Development aid for screenshots: unfolds the first construction a tap could add */
+    internal fun debugUnfoldFirstConstruction() {
+        expandedConstruction = constructionsTable.getConstructionButtonDTOs().firstOrNull { it.rejectionReason == null }?.construction?.name
+        updateContent()
+    }
+
     /** Green "primary action" look for a button (same as the world screen sheet) */
     private fun primaryStyle(base: Button.ButtonStyle): Button.ButtonStyle {
         val upDrawable = BaseScreen.skinStrings.getUiBackground("CityScreen/Portrait/PrimaryButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, accentGreen)
