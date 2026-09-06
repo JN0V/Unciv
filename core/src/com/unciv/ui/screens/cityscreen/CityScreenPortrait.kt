@@ -63,7 +63,8 @@ class CityScreenPortrait(
     /** Y (stage coordinates) of the map area's bottom edge, so the [CityScreen] can size its map pane */
     val mapBottom: Float get() = screenStage.height - headerHeight - mapHeight
     private val headerHeight = 132f
-    private val mapHeight = (screenStage.height * 0.34f).coerceAtLeast(260f)
+    // Seb (2026-09-06): the build list below was too tall - the map gets close to half the screen, the list scrolls anyway
+    private val mapHeight = (screenStage.height * 0.47f).coerceAtLeast(300f)
 
     private val panelColor = Color(0.03f, 0.05f, 0.24f, 0.96f)
     private val rowColor = Color(0.2f, 0.3f, 0.5f, 0.55f)

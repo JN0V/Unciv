@@ -453,15 +453,9 @@ class WorldScreen(
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
 
         topBar.update(selectedCiv)
-        if (tutorialTaskTable.isVisible)
-            tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
-
         if (techPolicyAndDiplomacy.update())
             displayTutorial(TutorialTrigger.OtherCivEncountered)
-        if (portraitLayout && tutorialTaskTable.isVisible) {
-            // No room beside the tech/policy buttons on a phone: stack the task below them
-            tutorialTaskTable.y = techPolicyAndDiplomacy.y - tutorialTaskTable.height - 5f
-        }
+        if (tutorialTaskTable.isVisible) positionTutorialTaskTable()  // after the tech/policy buttons got their size
 
         if (uiEnabled && bottomSheet == null) {
             // UnitActionsTable measures geometry (its own y, techPolicyAndDiplomacy and fogOfWarButton), so call update this late
@@ -592,7 +586,7 @@ class WorldScreen(
     }
 
     /** "I read it": folds the task card into a small icon until the next task (phone). Shared with the city screen. */
-    internal fun tutorialTaskCollapseButton(onCollapse: () -> Unit = { displayTutorialTaskOnUpdate() }): Actor {
+    internal fun tutorialTaskCollapseButton(onCollapse: () -> Unit = { shouldUpdate = true }): Actor {
         val button = ImageGetter.getImage("OtherIcons/Close").apply { setSize(18f, 18f) }.surroundWithCircle(30f, color = Color(0.2f, 0.3f, 0.5f, 1f))
         button.touchable = Touchable.enabled
         button.onClick {
@@ -600,6 +594,20 @@ class WorldScreen(
             onCollapse()
         }
         return button
+    }
+
+    /** Phone: below the tech/policy buttons (never beside or over them); folded, as a small icon at the right edge */
+    private fun positionTutorialTaskTable() {
+        if (!portraitLayout) {
+            tutorialTaskTable.centerX(stage)
+            tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
+            return
+        }
+        val below = minOf(topBar.getYForTutorialTask(), techPolicyAndDiplomacy.y) - 5f
+        if (UncivGame.Current.isTutorialTaskCollapsed)
+            tutorialTaskTable.setPosition(stage.width - 8f, topBar.getYForTutorialTask() - 5f, Align.topRight)
+        else
+            tutorialTaskTable.setPosition(stage.width / 2f, below, Align.top)
     }
 
     private fun displayTutorialTaskOnUpdate() {
@@ -626,12 +634,12 @@ class WorldScreen(
             explainTutorialTaskIfNew(tutorialTask)  // every update: the briefing popup may have been in the way when the card appeared
         } else {
             tutorialTaskTable.clear()
-            tutorialTaskTable.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(30f,30f) }).pad(5f)
+            val iconSize = if (portraitLayout) 26f else 30f
+            tutorialTaskTable.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(iconSize, iconSize) }).pad(5f)
             tutorialTaskTableHash = 0
         }
         tutorialTaskTable.pack()
-        tutorialTaskTable.centerX(stage)
-        tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
+        positionTutorialTaskTable()
         tutorialTaskTable.onClick {
             if (portraitLayout && !UncivGame.Current.isTutorialTaskCollapsed) {
                 openTutorialTaskPopup(tutorialTask)
