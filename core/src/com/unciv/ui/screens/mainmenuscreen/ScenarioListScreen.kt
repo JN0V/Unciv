@@ -270,13 +270,15 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
     override fun recreate(): BaseScreen = ScenarioListScreen()
 
     companion object {
-        /** True when [gameId] is the id of a scenario shipped by an installed mod (reads the scenario previews - call off the GL thread) */
-        fun isScenarioGame(gameId: String): Boolean {
-            if (gameId.isEmpty()) return false
+        /** gameIds of the scenarios shipped by installed mods; read once per process (the previews are small, the list rarely changes) */
+        private val scenarioGameIds: Set<String> by lazy {
             val files = UncivGame.Current.files
-            return files.getScenarioFiles().any { (file, _) ->
-                try { files.loadGamePreviewFromFile(file).gameId == gameId } catch (_: Exception) { false }
-            }
+            files.getScenarioFiles().mapNotNull { (file, _) ->
+                try { files.loadGamePreviewFromFile(file).gameId } catch (_: Exception) { null }
+            }.toSet()
         }
+
+        /** True when [gameId] is the id of a scenario shipped by an installed mod */
+        fun isScenarioGame(gameId: String): Boolean = gameId.isNotEmpty() && gameId in scenarioGameIds
     }
 }

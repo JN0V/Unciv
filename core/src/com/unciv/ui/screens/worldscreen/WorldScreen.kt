@@ -45,6 +45,7 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.devconsole.DevConsolePopup
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
+import com.unciv.ui.screens.mainmenuscreen.ScenarioListScreen
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
@@ -140,6 +141,7 @@ class WorldScreen(
 
     /** Portrait (phone) layout: bottom sheet instead of floating unit/actions/next-turn widgets */
     internal val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+    private val isScenarioGame by lazy { ScenarioListScreen.isScenarioGame(gameInfo.gameId) }
 
     // Floating Widgets going counter-clockwise
     internal val topBar = WorldScreenTopBar(this)
@@ -405,7 +407,8 @@ class WorldScreen(
     private fun update() {
 
         if (uiEnabled) {
-            displayTutorialsOnUpdate()
+            // A scenario brings its own briefing and guided tasks: the game's generic tutorial popups would only get in the way (phone)
+            if (!(portraitLayout && isScenarioGame)) displayTutorialsOnUpdate()
 
             bottomUnitTable.update()
 
