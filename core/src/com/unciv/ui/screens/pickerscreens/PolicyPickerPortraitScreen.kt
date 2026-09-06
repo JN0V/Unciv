@@ -38,8 +38,7 @@ class PolicyPickerPortraitScreen(
     private var selectedPolicy: Policy? = select?.let { ruleset.policies[it] }
     private var openBranch: String? = selectedPolicy?.branch?.name
         ?: branches.firstOrNull { policies.isAdopted(it.name) && !policies.isAdopted(it.policies.last().name) }?.name
-        ?: branches.firstOrNull { isPickable(it) }?.name
-        ?: branches.firstOrNull()?.name
+
 
     private val panelColor = Color(0.03f, 0.05f, 0.24f, 0.96f)
     private val rowColor = Color(0.2f, 0.3f, 0.5f, 0.45f)

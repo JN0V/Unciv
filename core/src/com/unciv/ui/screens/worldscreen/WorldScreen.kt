@@ -582,7 +582,8 @@ class WorldScreen(
     internal fun explainTutorialTaskIfNew(tutorialTask: Event, onScreen: BaseScreen = this, afterChoice: () -> Unit = { shouldUpdate = true }) {
         if (!portraitLayout || onScreen.hasOpenPopups() || viewingCiv.popupAlerts.isNotEmpty()) return
         if (tutorialTask.civilopediaText.count { it.text.isNotEmpty() && !it.separator } < 4) return
-        if (!explainedTutorialTasks.add("${gameInfo.gameId}/${tutorialTask.name}")) return
+        if (!game.settings.tutorialTasksExplained.add("${gameInfo.gameId}/${tutorialTask.name}")) return
+        game.settings.save()
         openTutorialTaskPopup(tutorialTask, onScreen, afterChoice)
     }
 
@@ -882,11 +883,6 @@ class WorldScreen(
         }
 
         super.render(delta)
-    }
-
-    companion object {
-        /** "gameId/event name" of tutorial tasks whose help popup already opened by itself - cleared when a scenario starts fresh */
-        val explainedTutorialTasks = HashSet<String>()
     }
 
     /** Development aid (see [BaseScreen.debugScreenshotIfRequested]): env UNCIV_DEBUG_ACTION picks what to do before the capture */

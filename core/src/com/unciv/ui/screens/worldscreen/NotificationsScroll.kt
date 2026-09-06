@@ -49,6 +49,10 @@ class NotificationsScroll(
     }
 
     private companion object {
+        /** Hash of the notification list the player folded away (swipe, bell or Hide), kept across WorldScreen instances */
+        var foldedNotificationsHash = 0
+        /** Phone: the Hidden/Visible toggle for this session, see [settingStorage] */
+        var portraitSettingInMemory: String? = null
         /** Scale the entire ScrollPane by this factor (classic layout; portrait uses [NotificationsScroll.scaleFactor]) */
         const val classicScaleFactor = 0.5f
         const val portraitScaleFactor = 0.62f
@@ -90,6 +94,8 @@ class NotificationsScroll(
 
     //region private fields
     private var notificationsHash: Int = 0
+    /** Plain hash of the last notification list given to [update], compared with [foldedNotificationsHash] */
+    private var currentListHash: Int = 0
 
     private val scaleFactor = if (worldScreen.portraitLayout) portraitScaleFactor else classicScaleFactor
     private val inverseScaleFactor = 1f / scaleFactor
@@ -150,8 +156,13 @@ class NotificationsScroll(
         get () = scrollX <= scrolledAwayEpsilon
         set(value) {
             restoreButton.unblock()
+            programmaticScroll = true
             scrollX = if (value) 0f else maxX
+            programmaticScroll = false
         }
+
+    /** True while [isHidden] moves the band itself (as opposed to the player's swipe) */
+    private var programmaticScroll = false
 
     /**
      * Update widget contents if necessary and recalculate layout.
@@ -168,6 +179,7 @@ class NotificationsScroll(
         coveredNotificationsBottom: Float
     ) {
         getUserSetting()
+        currentListHash = notifications.hashCode()
         if (userSetting == UserSetting.Disabled) {
             restoreButton.setPosition(coveredNotificationsBottom)
             applyUserSettingChange()
@@ -215,7 +227,10 @@ class NotificationsScroll(
 
         if (!userSetting.static) {
             restoreButton.unblock()
-            if (contentChanged && !userSettingChanged && isHidden)
+            // Unfold unless the player folded exactly this list - also on a fresh WorldScreen (the game rebuilds it
+            // every turn and after most screens), which is why the folded hash lives in the companion object
+            val unseen = notifications.isNotEmpty() && notifications.hashCode() != foldedNotificationsHash
+            if (isHidden && unseen && (contentChanged || userSettingChanged))
                 isHidden = false
         }
 
@@ -271,6 +286,8 @@ class NotificationsScroll(
         notificationsTable.row()
 
         val backgroundDrawable = BaseScreen.skinStrings.getUiBackground("WorldScreen/Notification", BaseScreen.skinStrings.roundedEdgeRectangleShape)
+        if (worldScreen.portraitLayout && !userSetting.static)
+            notificationsTable.add(HideButton(backgroundDrawable)).right().row()
 
         val orderedNotifications = (additionalNotification + notifications)
             .groupBy { it.category }
@@ -326,6 +343,19 @@ class NotificationsScroll(
         notificationsTable.row()
         highlightNotification = null  // no longer needed
         return true
+    }
+
+    /** Phone: "Hide" at the top of the band folds it behind the bell (the swipe gesture is not discoverable) */
+    private inner class HideButton(backgroundDrawable: NinePatchDrawable) : Table() {
+        init {
+            touchable = Touchable.enabled
+            val pill = Table()
+            pill.background = backgroundDrawable
+            pill.add("Hide".toLabel(ImageGetter.CHARCOAL, fontSize)).padRight(6f)
+            pill.add(ImageGetter.getImage("OtherIcons/Close").apply { color = ImageGetter.CHARCOAL }).size(iconSize * 0.7f)
+            add(pill).pad(listItemPad, listItemPad, listItemPad, rightPadToScreenEdge)
+            onClick { foldedNotificationsHash = currentListHash; isHidden = true }
+        }
     }
 
     private inner class CategoryHeader(
@@ -538,8 +568,10 @@ class NotificationsScroll(
             if (blockCheck) return
             if (active && scrollX >= scrolledAwayEpsilon * 1.2f)
                 hide()
-            if (!active && scrollX <= scrolledAwayEpsilon)
+            if (!active && scrollX <= scrolledAwayEpsilon) {
+                if (!programmaticScroll) foldedNotificationsHash = currentListHash  // the player swiped the band away: keep it folded for this content
                 show()
+            }
         }
 
         fun clicked() {
@@ -571,7 +603,7 @@ class NotificationsScroll(
     }
 
     private fun getUserSetting() {
-        val settingString = GUI.getSettings().notificationScroll
+        val settingString = settingStorage
         val setting = UserSetting.entries.firstOrNull { it.name == settingString }
             ?: UserSetting.default()
         if (::userSetting.isInitialized && setting == userSetting) {
@@ -624,6 +656,18 @@ class NotificationsScroll(
     private fun updateUserSetting(newSetting: UserSetting) {
         if (newSetting == userSetting || userSetting.static) return
         userSetting = newSetting
-        GUI.getSettings().notificationScroll = newSetting.name
+        settingStorage = newSetting.name
     }
+
+    /** The swipe/bell mechanics toggle the stored setting between Hidden and Visible; the phone keeps its own copy,
+     *  defaulting to Hidden (folded behind the bell, unfolds when something new arrives) since the band covers the map */
+    private var settingStorage: String
+        get() = if (worldScreen.portraitLayout) (portraitSettingInMemory ?: GUI.getSettings().notificationScrollPortrait)
+                else GUI.getSettings().notificationScroll
+        set(value) {
+            // Phone: the swipe/bell/Hide toggles live for the session only (the WorldScreen is rebuilt every turn);
+            // the stored preference stays the dynamic mode
+            if (worldScreen.portraitLayout) portraitSettingInMemory = value
+            else GUI.getSettings().notificationScroll = value
+        }
 }

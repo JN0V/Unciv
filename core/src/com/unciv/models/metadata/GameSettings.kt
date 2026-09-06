@@ -50,6 +50,8 @@ class GameSettings {
     /** NotificationScroll on Word Screen visibility control - mapped to [NotificationsScroll.UserSetting] enum */
     // Defaulting this to "" - and implement the fallback only in NotificationsScroll leads to Options popup and actual effect being in disagreement!
     var notificationScroll: String = NotificationsScroll.UserSetting.default().name
+    /** Same for the phone layout, where the band covers the map: folded by default, unfolds on new notifications */
+    var notificationScrollPortrait: String = NotificationsScroll.UserSetting.Hidden.name
     var showMinimap = true
     /** Portrait (phone) layout: [LayoutMode.Auto] follows the screen orientation */
     var layoutMode: LayoutMode = LayoutMode.Auto
@@ -61,6 +63,8 @@ class GameSettings {
     var tutorialTasksCompleted = HashSet<String>()
     /** gameIds the player has won - lets the scenario list mark completed scenarios */
     var wonGameIds = HashSet<String>()
+    /** "gameId/event name" of tutorial tasks whose help already opened by itself (phone) - cleared when a scenario starts fresh */
+    var tutorialTasksExplained = HashSet<String>()
 
     enum class LongPressIndicatorSetting {
         Default, Off, On, Debug; // Debug only offered on Debug page of Options

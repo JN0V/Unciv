@@ -59,6 +59,8 @@ class WorldScreenBottomSheet(
     private val nextUnitButton = IconTextButton("", ImageGetter.getImage("OtherIcons/Skip"), actionFontSize)
     private val nextUnitCell: com.badlogic.gdx.scenes.scene2d.ui.Cell<*>
     private var openMore: (() -> Unit)? = null
+    /** One muted line under the actions: why a greyed action is not possible here (a newcomer otherwise guesses) */
+    private val hintRow = Table()
     private var shownForUnitHash = 0
     private var shownActionCount = -1
 
@@ -93,6 +95,7 @@ class WorldScreenBottomSheet(
 
         add(unitTable).center().row()
         add(actionsRow).growX().row()
+        add(hintRow).growX().row()
         add(todoRow).growX().row()
         add(statusRow).growX()
     }
@@ -139,7 +142,11 @@ class WorldScreenBottomSheet(
             actionsRow.add(openButton).width(cellWidth)
             return
         }
+        hintRow.clear()
         if (unit == null || actions.isEmpty()) return
+        actions.firstOrNull { it.type == UnitActionType.FoundCity && it.action == null }?.let {
+            foundCityBlockedReason(unit)?.let { reason -> hintRow.add(buildHint(reason)).growX().pad(2f) }
+        }
 
         // When only one more action than the primary slots exists, show it instead of a "More" button
         val primaryCount = if (actions.size <= primaryActionCount + 1) actions.size else primaryActionCount
@@ -208,6 +215,32 @@ class WorldScreenBottomSheet(
         chip.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(16f).padLeft(6f)
         chip.onClick { pending.action(worldScreen) }
         todoRow.add(chip).growX().minHeight(40f).pad(2f)
+    }
+
+    private fun buildHint(text: String): Table {
+        val hint = Table()
+        hint.background = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/Hint", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, Color(0.2f, 0.3f, 0.5f, 0.45f))
+        hint.pad(5f, 10f, 5f, 10f)
+        hint.add(ImageGetter.getImage("OtherIcons/Question").apply { color = Color.LIGHT_GRAY }).size(18f).padRight(8f)
+        hint.add(text.toLabel(fontSize = 14, fontColor = Color(0.85f, 0.88f, 0.95f, 1f)).apply { wrap = true }).growX().left()
+        return hint
+    }
+
+    /** Mirrors [com.unciv.logic.map.tile.Tile.canBeSettled] to name the blocking rule */
+    private fun foundCityBlockedReason(unit: MapUnit): String? {
+        val tile = unit.getTile()
+        val civ = unit.civ
+        val constants = civ.gameInfo.ruleset.modOptions.constants
+        val sameContinentCity = tile.getTilesInDistance(constants.minimalCityDistance).any { it.isCityCenter() && it.getContinent() == tile.getContinent() }
+        val otherContinentCity = tile.getTilesInDistance(constants.minimalCityDistanceOnDifferentContinents).any { it.isCityCenter() && it.getContinent() != tile.getContinent() }
+        return when {
+            tile.isWater || tile.isImpassible() -> "Cannot found a city here: water or impassable terrain"
+            sameContinentCity -> "Too close to a city: [${constants.minimalCityDistance}] free tiles between two cities at least"
+            otherContinentCity -> "Too close to a city on another landmass"
+            tile.owningCity != null && tile.owningCity!!.civ != civ -> "This land belongs to another civilization"
+            !unit.hasMovement() -> "No movement left this turn: found the city next turn"
+            else -> null
+        }
     }
 
     /** Opens the full action list, as the "More" button does (no-op when there is none) */

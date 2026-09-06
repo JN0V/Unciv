@@ -22,7 +22,6 @@ import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.savescreens.LoadGameScreen
-import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 
@@ -250,7 +249,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
                     game.settings.tutorialTasksCompleted.clear()
                     game.settings.showTutorials = true
                     game.isTutorialTaskCollapsed = false
-                    WorldScreen.explainedTutorialTasks.clear()
+                    game.settings.tutorialTasksExplained.clear()
                     game.settings.save()
                 }
                 val gameInfo = game.files.loadGameFromFile(file)
