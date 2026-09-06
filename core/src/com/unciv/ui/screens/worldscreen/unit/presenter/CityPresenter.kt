@@ -53,10 +53,21 @@ class CityPresenter(private val unitTable: UnitTable, private val unitPresenter:
 
         descriptionTable.clear()
         descriptionTable.defaults().pad(2f).padRight(5f)
-        descriptionTable.add("Strength".tr())
-        descriptionTable.add(city.getDefendingStrength().tr()).row()
-        descriptionTable.add("Bombard strength".tr())
-        descriptionTable.add(city.getAttackingStrength().tr()).row()
+        val ownCity = if (worldScreen.portraitLayout) city.tryGetCityView()?.getCity() else null
+        if (ownCity != null) {
+            // Phone: what a player manages (size and what is being built) rather than combat strength
+            descriptionTable.add("Population".tr())
+            descriptionTable.add(ownCity.population.population.tr()).row()
+            val construction = ownCity.cityConstructions.getCurrentConstruction()
+            val turns = ownCity.cityConstructions.turnsToConstruction(construction.name)
+            descriptionTable.add("Current construction".tr())
+            descriptionTable.add(construction.name.tr() + if (construction is com.unciv.models.ruleset.PerpetualConstruction) "" else " (${turns.tr()}${com.unciv.ui.components.fonts.Fonts.turn})").row()
+        } else {
+            descriptionTable.add("Strength".tr())
+            descriptionTable.add(city.getDefendingStrength().tr()).row()
+            descriptionTable.add("Bombard strength".tr())
+            descriptionTable.add(city.getAttackingStrength().tr()).row()
+        }
 
         shouldUpdate = true
 

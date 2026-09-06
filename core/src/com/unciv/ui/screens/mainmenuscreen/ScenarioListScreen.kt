@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.UncivGame
 import com.unciv.logic.GameInfoPreview
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.ui.components.extensions.surroundWithCircle
@@ -116,7 +117,8 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
             return
         }
 
-        val current = entries.firstOrNull { it.inProgress } ?: entries.firstOrNull { !it.completed } ?: entries.first()
+        // The scenarios are a course: the next one is the first not completed, resumed if a save exists
+        val current = entries.firstOrNull { !it.completed } ?: entries.first()
         val showModNames = entries.map { it.mod.name }.distinct().size > 1
         var lastMod: String? = null
         var number = 0
@@ -172,7 +174,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
 
         val right: Table = Table()
         when {
-            entry.completed -> right.add("Completed".toLabel(fontSize = 15, fontColor = Color(0.4f, 0.86f, 0.45f, 1f)))
+            entry.completed -> right.add("Finished".toLabel(fontSize = 15, fontColor = Color(0.4f, 0.86f, 0.45f, 1f)))
             else -> right.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = if (isCurrent) Color.WHITE else muted }).size(20f)
         }
         card.add(right).padLeft(8f)
@@ -222,7 +224,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         val saveFile = entry.latestSaveFile
         val save = entry.latestSave
         if (saveFile == null || save == null) {
-            loadScenario(entry.file)
+            loadScenario(entry.file, freshStart = true)
             return
         }
         val popup = Popup(this)
@@ -230,15 +232,23 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         popup.addButton(if (entry.completed) "Continue" else "Resume at turn [${save.turns}]") {
             popup.close(); loadScenario(saveFile)
         }.row()
-        popup.addButton("Restart from the beginning") { popup.close(); loadScenario(entry.file) }.row()
+        popup.addButton("Restart from the beginning") { popup.close(); loadScenario(entry.file, freshStart = true) }.row()
         popup.addCloseButton()
         popup.open()
     }
 
-    private fun loadScenario(file: FileHandle) {
+    /** @param freshStart true when starting the scenario file itself (not resuming a save of it):
+     *  scenarios are tutorials, so the device-wide "tutorial task completed" memory is reset so their guidance shows again */
+    private fun loadScenario(file: FileHandle, freshStart: Boolean = false) {
         val loadingPopup = LoadingPopup(this)
         Concurrency.run("LoadScenario") {
             try {
+                if (freshStart) {
+                    game.settings.tutorialTasksCompleted.clear()
+                    game.settings.showTutorials = true
+                    game.isTutorialTaskCollapsed = false
+                    game.settings.save()
+                }
                 val gameInfo = game.files.loadGameFromFile(file)
                 game.loadGame(gameInfo, callFromLoadScreen = true)
             } catch (ex: Exception) {
@@ -252,4 +262,15 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
     }
 
     override fun recreate(): BaseScreen = ScenarioListScreen()
+
+    companion object {
+        /** True when [gameId] is the id of a scenario shipped by an installed mod (reads the scenario previews - call off the GL thread) */
+        fun isScenarioGame(gameId: String): Boolean {
+            if (gameId.isEmpty()) return false
+            val files = UncivGame.Current.files
+            return files.getScenarioFiles().any { (file, _) ->
+                try { files.loadGamePreviewFromFile(file).gameId == gameId } catch (_: Exception) { false }
+            }
+        }
+    }
 }

@@ -32,8 +32,10 @@ class PickerPane(
     /** A button on the lower right of [bottomTable] you can use for a "OK"-type action, starts disabled */
     val rightSideButton = "".toTextButton()
 
-    private val screenSplit = 0.85f
-    private val maxBottomTableHeight = 150f     // about 7 lines of normal text
+    private val portraitPane = com.badlogic.gdx.Gdx.graphics.height > com.badlogic.gdx.Gdx.graphics.width
+    private val screenSplit = if (portraitPane) 0.6f else 0.85f
+    // Phone: the description sits under the content, so let it have room (victory texts, tech unlocks) instead of 2 visible lines
+    private val maxBottomTableHeight = if (portraitPane) 230f else 150f     // about 7 lines of normal text in landscape
 
     /**
      * The table displaying the choices from which to pick (usually).

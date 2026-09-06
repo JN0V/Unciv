@@ -7,6 +7,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.ui.screens.mainmenuscreen.ScenarioListScreen
+import com.unciv.utils.Concurrency
+import com.unciv.utils.launchOnGLThread
 import com.unciv.logic.GameInfo
 import com.unciv.logic.VictoryData
 import com.unciv.logic.civilization.Civilization
@@ -198,6 +201,18 @@ class VictoryScreen(
         closeButton.onClick {
             gameInfo.oneMoreTurnMode = true
             game.popScreen()
+        }
+
+        // A scenario ends here: offer the way back to the scenario list instead of a fresh random game
+        Concurrency.run("IsScenario") {
+            if (!ScenarioListScreen.isScenarioGame(gameInfo.gameId)) return@run
+            launchOnGLThread {
+                rightSideButton.setText("Discovery".tr())
+                rightSideButton.onClick {
+                    game.goToMainMenu()
+                    game.pushScreen { ScenarioListScreen() }
+                }
+            }
         }
     }
 

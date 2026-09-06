@@ -51,7 +51,7 @@ class TileInfoTable(private val worldScreen: WorldScreen) : Table(BaseScreen.ski
         }
 
         pack()
-        addBorderAllowOpacity(1f, Color.WHITE)
+        if (!worldScreen.portraitLayout) addBorderAllowOpacity(1f, Color.WHITE)  // the phone card is already framed by its rounded background
     }
 
     private fun getStatsTable(tileView: TileView): Table {

@@ -59,8 +59,11 @@ class RenderEvent(
             }
             if (event.civilopediaText.isNotEmpty()) {
                 if (mode == Mode.Compact) {
-                    // Title only, the full help opens on tap (see WorldScreen)
-                    val lines = event.civilopediaText.filter { it.extraImage.isEmpty() && it.text.isNotEmpty() }.take(1)
+                    // Title plus the first "how to" line in smaller type; images and the rest open on tap (see WorldScreen)
+                    val textLines = event.civilopediaText.filter { it.extraImage.isEmpty() && it.text.isNotEmpty() && !it.separator }
+                    val lines = ArrayList<FormattedLine>()
+                    textLines.firstOrNull()?.let { lines.add(it) }
+                    textLines.drop(1).firstOrNull()?.let { lines.add(FormattedLine(it.text, size = 15, color = "#c8d2e6", link = it.link)) }
                     val row = Table()
                     row.add(MarkupRenderer.render(lines, textWidth - 40f, linkAction = ::openCivilopedia)).growX()
                     row.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(18f).padLeft(8f)

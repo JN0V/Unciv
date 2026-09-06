@@ -103,7 +103,8 @@ class WorldScreenBottomSheet(
             UnitActions.getUnitActions(unit).sortedWith(compareBy({ primaryRank(it.type, unit.isCivilian()) }, { -it.useFrequency })).toList()
         else emptyList()
 
-        val newHash = unit?.hashCode() ?: 0
+        // A selected city (no unit) must also rebuild the row, so its "Open city screen" button appears
+        val newHash = unit?.hashCode() ?: unitTable.selectedCity?.getCity()?.hashCode() ?: 0
         if (newHash != shownForUnitHash || actions.size != shownActionCount) {
             shownForUnitHash = newHash
             shownActionCount = actions.size
@@ -212,14 +213,16 @@ class WorldScreenBottomSheet(
     /** Opens the full action list, as the "More" button does (no-op when there is none) */
     fun openMoreMenu() = openMore?.invoke()
 
-    /** Icon above a single ellipsized text line, so any number of columns fits the sheet width */
+    /** Icon above up to two wrapped text lines, so any number of columns fits the sheet width and
+     *  a long action name ("Found city" in French) stays readable instead of being cut */
     private fun buildStackedButton(icon: Actor, text: String, fontColor: Color, width: Float): Button {
         val button = Button(BaseScreen.skin)
         button.add(icon).size(24f).padTop(4f).row()
-        val label = text.toLabel(fontColor, actionFontSize - 2, hideIcons = true)
-        label.setEllipsis("…")
+        val label = text.toLabel(fontColor, actionFontSize - 3, hideIcons = true)
+        val lineHeight = label.prefHeight
+        label.wrap = true
         label.setAlignment(Align.center)
-        button.add(label).width(width - 12f).padBottom(2f)
+        button.add(label).width(width - 8f).height(lineHeight * 2f).padBottom(2f)
         return button
     }
 

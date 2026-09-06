@@ -34,7 +34,9 @@ class VictoryScreenOurVictory(
         for (victory in victoriesToShow.values) {
             val victoryScreenHeaderLabel = victory.victoryScreenHeader.toLabel()
             victoryScreenHeaderLabel.wrap = true
-            add(victoryScreenHeaderLabel).width(stageWidth / 5)
+            // Phone: the columns share the whole width instead of a fifth each (which broke words apart)
+            val labelWidth = if (worldScreen.portraitLayout) (stageWidth - 40f) / victoriesToShow.size else stageWidth / 5
+            add(victoryScreenHeaderLabel).width(labelWidth)
         }
 
         header.addSeparator(Color.GRAY)

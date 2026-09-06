@@ -29,6 +29,10 @@ class SummaryPresenter(private val unitTable: UnitTable) : UnitTable.Presenter {
             if(subText!="") {
                 separator.isVisible = true
                 descriptionTable.add(subText)
+            } else if (worldScreen.portraitLayout) {
+                // Phone: an empty sheet puzzles a newcomer - say what to do
+                separator.isVisible = true
+                descriptionTable.add("Tap a unit or a city on the map".tr())
             } else {
                 separator.isVisible = false
             }
