@@ -203,20 +203,10 @@ class WorldScreenBottomSheet(
         return Button.ButtonStyle(base).apply { up = upDrawable; down = downDrawable; over = upDrawable; checked = upDrawable }
     }
 
-    /** What the game requires before the turn can end, as an orange line above the buttons */
+    /** The orange "before ending the turn" chip used to live here; the next-turn button itself now turns orange and
+     *  names the pending action (a chip above it said the same thing twice), so the row stays empty */
     private fun updateTodo() {
         todoRow.clear()
-        val pending = nextTurnButton.pendingAction ?: return
-        val chip = Table()
-        chip.background = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/Todo", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, colorFromRGB(120, 70, 10))
-        chip.touchable = Touchable.enabled
-        chip.pad(6f, 12f, 6f, 12f)
-        chip.add(ImageGetter.getImage("OtherIcons/ExclamationMark").apply { color = colorFromRGB(255, 190, 80) }).size(22f).padRight(8f)
-        val text = "{Before ending the turn}: ".tr() + pending.getText(worldScreen).tr()
-        chip.add(text.toLabel(fontSize = 15).apply { setEllipsis("…") }).minWidth(0f).growX().left()
-        chip.add(ImageGetter.getImage("OtherIcons/ForwardArrow").apply { color = Color.LIGHT_GRAY }).size(16f).padLeft(6f)
-        chip.onClick { pending.action(worldScreen) }
-        todoRow.add(chip).growX().minHeight(40f).pad(2f)
     }
 
     private fun buildHint(text: String): Table {

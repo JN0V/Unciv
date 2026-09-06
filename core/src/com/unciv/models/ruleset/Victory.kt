@@ -31,6 +31,8 @@ enum class MilestoneType(val text: String) {
     WinDiplomaticVote("Win diplomatic vote"),
     ScoreAfterTimeOut("Have highest score after max turns"),
     MoreCountableThanEachPlayer("Have more [countable] than each player's [countable]"),
+    /** Own at least N of a countable (tiles with an improvement, adopted policies, units...) - lets a scenario victory require several concrete things */
+    HaveCountable("Have at least [amount] [countable]"),
 }
 
 class Victory : INamed, ICivilopediaText {
@@ -140,6 +142,11 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
     fun getMoreCountableThanOtherCivRelevant(civ: Civilization, otherCiv: Civilization): Boolean =
         civ != otherCiv && otherCiv.isMajorCiv() && otherCiv.isAlive()
 
+    /** [MilestoneType.HaveCountable]: the amount required */
+    @Readonly fun getCountableToDo(): Int = params[0].toIntOrNull() ?: 0
+    /** [MilestoneType.HaveCountable]: the civ's current amount of the countable */
+    @Readonly fun getCountableDone(civInfo: Civilization): Int = Countables.getCountableAmount(params[1], GameContext(civInfo)) ?: 0
+
     @Readonly
     fun hasBeenCompletedBy(civInfo: Civilization): Boolean {
         return when (type!!) {
@@ -158,6 +165,7 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
                 val relevantCivs = civInfo.gameInfo.civilizations.filter { getMoreCountableThanOtherCivRelevant(civInfo, it) }
                 relevantCivs.isNotEmpty() && relevantCivs.all { getMoreCountableThanOtherCivPercent(civInfo, it) > 100f }
             }
+            MilestoneType.HaveCountable -> getCountableDone(civInfo) >= getCountableToDo()
             MilestoneType.BuildingBuiltGlobally -> civInfo.gameInfo.getCities().any {
                 it.cityConstructions.isBuilt(params[0])
             }
@@ -198,6 +206,11 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
                     if (completed) amountToDo
                     else civInfo.getCompletedPolicyBranchesCount().tr()
                 "{$uniqueDescription} (${amountDone}/${amountToDo})"
+            }
+            MilestoneType.HaveCountable -> {
+                val amountToDo = getCountableToDo()
+                val amountDone = if (completed) amountToDo else getCountableDone(civInfo).coerceAtMost(amountToDo)
+                "{$uniqueDescription} (${amountDone.tr()}/${amountToDo.tr()})"
             }
             MilestoneType.CaptureAllCapitals -> {
                 val amountToDo = civsWithPotentialCapitalsToOwn(civInfo.gameInfo).size
@@ -270,7 +283,7 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
             // No extra buttons necessary
             null,
             MilestoneType.BuiltBuilding, MilestoneType.BuildingBuiltGlobally,
-            MilestoneType.ScoreAfterTimeOut, MilestoneType.WinDiplomaticVote -> {}
+            MilestoneType.ScoreAfterTimeOut, MilestoneType.WinDiplomaticVote, MilestoneType.HaveCountable -> {}
 
             MilestoneType.AddedSSPartsInCapital -> {
                 val completedSpaceshipParts = civInfo.victoryManager.currentsSpaceshipParts
@@ -418,6 +431,7 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
             MilestoneType.WinDiplomaticVote -> Victory.Focus.CityStates
             MilestoneType.ScoreAfterTimeOut -> Victory.Focus.Score
             MilestoneType.WorldReligion -> Victory.Focus.Faith
+            MilestoneType.HaveCountable -> Victory.Focus.Production
         }
     }
 

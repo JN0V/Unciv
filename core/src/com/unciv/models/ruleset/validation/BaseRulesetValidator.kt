@@ -5,6 +5,7 @@ import com.unciv.logic.civilization.diplomacy.CityStatePersonality
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.EventChoice
 import com.unciv.models.ruleset.MilestoneType
+import com.unciv.models.ruleset.unique.Countables
 import com.unciv.models.ruleset.Policy
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
@@ -544,6 +545,12 @@ internal class BaseRulesetValidator(
                     && milestone.params[0] !in ruleset.buildings)
                     lines.add(
                         "Victory type ${victoryType.name} has milestone \"${milestone.uniqueDescription}\" that references an unknown building ${milestone.params[0]}!",
+                        RulesetErrorSeverity.Error,
+                    )
+                if (milestone.type == MilestoneType.HaveCountable
+                    && (milestone.params[0].toIntOrNull() == null || Countables.getMatching(milestone.params[1], ruleset) == null))
+                    lines.add(
+                        "Victory type ${victoryType.name} has milestone \"${milestone.uniqueDescription}\" with an unknown amount or countable!",
                         RulesetErrorSeverity.Error,
                     )
             }

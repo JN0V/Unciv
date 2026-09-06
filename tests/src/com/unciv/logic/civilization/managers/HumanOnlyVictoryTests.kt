@@ -66,3 +66,38 @@ class HumanOnlyVictoryTests {
         Assert.assertEquals(hashSetOf("Open the options table"), restored.tutorialTasksCompleted)
     }
 }
+
+/** [com.unciv.models.ruleset.MilestoneType.HaveCountable]: a scenario goal can require several concrete things */
+@RunWith(BaseTestRunner::class)
+class HaveCountableMilestoneTests {
+
+    @Test
+    fun `countable milestones complete in any order and show their progress`() {
+        val testGame = TestGame()
+        testGame.makeHexagonalMap(2)
+        val victory = json().fromJson(Victory::class.java, """{ "name": "S2", "humanOnly": true, "milestones": [
+            "Have at least [1] [Owned [Farm] Tiles]", "Build [Granary]", "Have at least [1] [Adopted [Tradition] Policies]" ] }""")
+        testGame.ruleset.victories[victory.name] = victory
+        testGame.gameInfo.gameParameters.victoryTypes = arrayListOf(victory.name)
+        val human = testGame.addCiv(isPlayer = true)
+        val city = testGame.addCity(human, testGame.getTile(0, 0))
+        val farmMilestone = victory.milestoneObjects[0]
+        val policyMilestone = victory.milestoneObjects[2]
+
+        Assert.assertFalse(farmMilestone.hasBeenCompletedBy(human))
+        Assert.assertEquals("{Have at least [1] [Owned [Farm] Tiles]} (0/1)", farmMilestone.getVictoryScreenButtonHeaderText(false, human))
+
+        // Out of order: the policy first, then the building, then the farm
+        human.policies.freePolicies = 1
+        human.policies.adopt(testGame.ruleset.policies["Tradition"]!!, branchCompletion = false)
+        Assert.assertTrue(policyMilestone.hasBeenCompletedBy(human))
+        city.cityConstructions.addBuilding("Granary")
+        Assert.assertNull(human.victoryManager.getVictoryTypeAchieved())
+
+        val farmTile = testGame.getTile(1, 0)
+        testGame.addTileToCity(city, farmTile)
+        farmTile.setImprovement("Farm")
+        Assert.assertTrue(farmMilestone.hasBeenCompletedBy(human))
+        Assert.assertEquals("S2", human.victoryManager.getVictoryTypeAchieved())
+    }
+}
