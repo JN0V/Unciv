@@ -14,9 +14,10 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.input.ActivationAction
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.keyShortcuts
-import com.unciv.ui.components.input.onActivation
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.widgets.WrappableLabel
 import com.unciv.ui.screens.civilopediascreen.FormattedLine
 import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
@@ -84,13 +85,15 @@ class RenderEvent(
         addSeparator()
 
         val button = choice.text.toTextButton()
-        button.onActivation {
+        val activate: ActivationAction = {
             onChoice(choice)
             choice.triggerChoice(gameInfo.currentPlayerCiv, unit)
         }
+        // Suppressive: the compact card and the city strip open the help popup on tap, a choice must not bubble up to that
+        button.onClickSuppressive(action = activate)
         val key = KeyCharAndCode.parse(choice.keyShortcut)
         if (key != KeyCharAndCode.UNKNOWN) {
-            button.keyShortcuts.add(key)
+            button.keyShortcuts.add(key, activate)  // explicit: onClick does not register the key/tap equivalence
             button.addTooltip(key)
         }
         add(button).row()

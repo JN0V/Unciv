@@ -84,9 +84,6 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
         add(expander).growX()
     }
 
-    /** Portrait layout: show the details straight away instead of the collapsed header */
-    fun openDetails() { if (!expander.isOpen) expander.toggle() }
-
     fun update(height: Float) {
         miniStatsTable.update()
 

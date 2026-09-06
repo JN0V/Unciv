@@ -6,10 +6,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.map.mapunit.MapUnit
-import com.unciv.logic.map.tile.ImprovementBuildingProblem
 import com.unciv.logic.map.tile.Tile
 import com.unciv.models.ruleset.tile.TileImprovement
-import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.fonts.Fonts
@@ -73,25 +71,18 @@ class ImprovementPickerPortraitScreen(
     private fun bg(part: String, color: Color) = skinStrings.getUiBackground(
         "ImprovementPicker/Portrait/$part", skinStrings.roundedEdgeRectangleSmallShape, color)
 
-    /** Same filter as the classic screen; problems are turned into one line of advice each */
+    /** Same filter and problem analysis as the classic screen ([ImprovementPickerScreen.getProblemReport]: "remove the
+     *  forest first" fallback, era cap on far-away techs); each proposed solution becomes one line of advice */
     private fun buildOptions(): List<Option> {
+        val tileWithoutLastTerrain = ImprovementPickerScreen.getTileWithoutLastTerrain(tile, ruleset)
+        val maxErasForward = ImprovementPickerScreen.getMaxErasForward(ruleset)
         val result = ArrayList<Option>()
         for (improvement in ruleset.tileImprovements.values) {
             if (improvement.turnsToBuild == -1 && improvement.name != Constants.cancelImprovementOrder) continue
             if (improvement.name == tile.improvement) continue
             if (!unit.canBuildImprovement(improvement)) continue
-            val problems = tile.improvementFunctions.getImprovementBuildingProblems(improvement, unit.cache.state).toSet()
-            if (problems.any { !it.reportable }) continue
-            val advice = ArrayList<String>()
-            if (ImprovementBuildingProblem.MissingTech in problems)
-                for (tech in improvement.requiredTechnologies(ruleset))
-                    if (tech != null && !civ.tech.isResearched(tech.name)) advice.add("Research [${tech.name}] first".tr())
-            if (ImprovementBuildingProblem.NotJustOutsideBorders in problems) advice.add("Have this tile close to your borders".tr())
-            if (ImprovementBuildingProblem.OutsideBorders in problems) advice.add("Have this tile inside your empire".tr())
-            if (ImprovementBuildingProblem.MissingResources in problems)
-                for (unique in improvement.getMatchingUniques(UniqueType.ConsumesResources))
-                    if (civ.getResourceAmount(unique.params[1]) < unique.params[0].toInt()) advice.add("Acquire more [${unique.params[1]}]".tr())
-            result.add(Option(improvement, advice))
+            val report = ImprovementPickerScreen.getProblemReport(tile, tileWithoutLastTerrain, improvement, unit, maxErasForward) ?: continue
+            result.add(Option(improvement, report.proposedSolutions.map { (text, _) -> text.tr() }))
         }
         // Possible first, cancel last
         return result.sortedWith(compareBy({ it.improvement.name == Constants.cancelImprovementOrder }, { it.problems.isNotEmpty() }))
@@ -209,8 +200,11 @@ class ImprovementPickerPortraitScreen(
         if (improvement.name == Constants.cancelImprovementOrder) {
             tile.stopWorkingOnImprovement()
         } else {
-            if (improvement.name != tile.improvementInProgress)
+            if (improvement.name != tile.improvementInProgress) {
                 tile.startWorkingOnImprovement(improvement, civ, unit)
+                // The tutorial task is about giving the order, not waiting for the result
+                game.settings.addCompletedTutorialTask("Construct an improvement")
+            }
             unit.action = null
             onAccept()
         }

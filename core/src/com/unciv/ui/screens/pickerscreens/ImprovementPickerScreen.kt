@@ -15,6 +15,7 @@ import com.unciv.GUI
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.tile.ImprovementBuildingProblem
 import com.unciv.logic.map.tile.Tile
+import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueType
@@ -53,6 +54,83 @@ class ImprovementPickerScreen(
 
         /** Return true if we can report improvements associated with the [problems] (or there are no problems for it at all). */
         fun canReport(problems: Collection<ImprovementBuildingProblem>) = problems.all { it.reportable }
+
+        /** Clone of [tile] without its top terrain feature, or null when no "Remove [feature]" improvement exists.
+         *  Keep the result around for speed - it is consulted once per improvement. */
+        internal fun getTileWithoutLastTerrain(tile: Tile, ruleset: Ruleset): Tile? {
+            if (Constants.remove + tile.lastTerrain.name !in ruleset.tileImprovements) return null
+            val newTile = tile.clone(addUnits = false)
+            newTile.setTerrainTransients()
+            newTile.removeTerrainFeature(newTile.lastTerrain.name)
+            return newTile
+        }
+
+        /** [ModConstants.maxImprovementTechErasForward][com.unciv.models.ModConstants.maxImprovementTechErasForward] with "no limit" as [Int.MAX_VALUE] */
+        internal fun getMaxErasForward(ruleset: Ruleset) =
+            ruleset.modOptions.constants.maxImprovementTechErasForward.takeUnless { it < 0 } ?: Int.MAX_VALUE
+
+        /** Shared by the classic and the phone picker: why [improvement] cannot be built on [tile] right now, as proposed solutions.
+         *  @return null when the improvement should not be listed at all (unreportable problem, or a tech too many eras ahead),
+         *  an empty report when it can be built now.
+         *  @param tileWithoutLastTerrain see [getTileWithoutLastTerrain] - pass null to skip the "remove terrain feature first" fallback
+         *  @param maxErasForward see [getMaxErasForward] */
+        internal fun getProblemReport(tile: Tile, tileWithoutLastTerrain: Tile?, improvement: TileImprovement, unit: MapUnit, maxErasForward: Int): ProblemReport? {
+            val ruleset = unit.civ.gameInfo.ruleset
+            val currentPlayerCiv = unit.civ.gameInfo.getCurrentPlayerCivilization()
+            val report = ProblemReport()
+            var unbuildableBecause = tile.improvementFunctions.getImprovementBuildingProblems(improvement, unit.cache.state).toSet()
+            if (!canReport(unbuildableBecause) && tileWithoutLastTerrain != null) {
+                // Try after pretending to have removed the top terrain layer.
+                unbuildableBecause = tileWithoutLastTerrain.improvementFunctions.getImprovementBuildingProblems(improvement, unit.cache.state).toSet()
+                if (!canReport(unbuildableBecause)) return null
+                report.suggestRemoval = true
+            }
+            if (!canReport(unbuildableBecause)) return null
+
+            with(report) {
+                if (suggestRemoval) {
+                    val removalName = Constants.remove + tile.lastTerrain.name
+                    removalImprovement = ruleset.tileImprovements[removalName]
+                    if (removalImprovement != null) {
+                        // Check for removals that need a tech that's not yet researched
+                        val cannotRemoveReport = getProblemReport(tile, null, removalImprovement!!, unit, maxErasForward)
+                        if (cannotRemoveReport != null) proposedSolutions.addAll(cannotRemoveReport.proposedSolutions)
+                        proposedSolutions.add("${Constants.remove}[${tile.lastTerrain.name}] first" to removalImprovement!!.makeLink())
+                    }
+                }
+
+                if (ImprovementBuildingProblem.MissingTech in unbuildableBecause) {
+                    val maxEraNumber = if (maxErasForward == Int.MAX_VALUE) Int.MAX_VALUE else currentPlayerCiv.getEraNumber()
+                    for (tech in improvement.requiredTechnologies(ruleset)) {
+                        val techEra = tech?.era(ruleset) ?: continue
+                        if (unit.civ.tech.isResearched(tech.name)) continue
+                        if (techEra.eraNumber > maxEraNumber) return null
+                        proposedSolutions.add("Research [${tech.name}] first" to tech.makeLink())
+                    }
+                }
+                if (ImprovementBuildingProblem.NotJustOutsideBorders in unbuildableBecause)
+                    proposedSolutions.add("Have this tile close to your borders" to null)
+                if (ImprovementBuildingProblem.OutsideBorders in unbuildableBecause)
+                    proposedSolutions.add("Have this tile inside your empire" to null)
+                if (ImprovementBuildingProblem.MissingResources in unbuildableBecause) {
+                    val resources = improvement.getMatchingUniques(UniqueType.ConsumesResources)
+                        .filter { currentPlayerCiv.getResourceAmount(it.params[1]) < it.params[0].toInt() }
+                        .map { "Acquire more [${it.params[1]}]" to ruleset.tileResources[it.params[1]]?.makeLink() }
+                    proposedSolutions.addAll(resources)
+                }
+            }
+            return report
+        }
+    }
+
+    /** Result of [getProblemReport]: what stands between the unit and an improvement, as (text, Civilopedia link) pairs */
+    internal class ProblemReport {
+        var suggestRemoval = false
+        var removalImprovement: TileImprovement? = null
+        /** `first` is the text, `second` the Civilopedia link */
+        val proposedSolutions = mutableSetOf<Pair<String, String?>>()
+        fun isEmpty() = proposedSolutions.isEmpty()
+        fun isQueueable() = removalImprovement != null && proposedSolutions.size == 1
     }
 
     private var selectedImprovement: TileImprovement? = null
@@ -61,8 +139,8 @@ class ImprovementPickerScreen(
     private val currentPlayerCiv = gameInfo.getCurrentPlayerCivilization()
     // Support for UniqueType.CreatesOneImprovement
     private val tileMarkedForCreatesOneImprovement = tile.isMarkedForCreatesOneImprovement()
-    private val tileWithoutLastTerrain = getTileWithoutLastTerrain()
-    private val maxErasForward = ruleset.modOptions.constants.maxImprovementTechErasForward.takeUnless { it < 0 } ?: Int.MAX_VALUE
+    private val tileWithoutLastTerrain = getTileWithoutLastTerrain(tile, ruleset)
+    private val maxErasForward = getMaxErasForward(ruleset)
 
     private fun getRequiredTechColumn(improvement: TileImprovement) =
         ruleset.technologies[improvement.techRequired]?.column?.columnNumber ?: -1
@@ -77,6 +155,8 @@ class ImprovementPickerScreen(
                 tile.startWorkingOnImprovement(improvement, currentPlayerCiv, unit)
                 if (secondImprovement != null)
                     tile.queueImprovement(secondImprovement, currentPlayerCiv, unit)
+                // The tutorial task is about giving the order, not waiting for the result
+                game.settings.addCompletedTutorialTask("Construct an improvement")
             }
             unit.action = null // this is to "wake up" the worker if it's sleeping
             onAccept()
@@ -134,16 +214,6 @@ class ImprovementPickerScreen(
         topTable.add(ownerTable)
         topTable.row()
         topTable.add(regularImprovements)
-    }
-
-    private fun getTileWithoutLastTerrain(): Tile? {
-        // clone tileInfo without "top" feature if it could be removed
-        // Keep this copy around for speed (in tileWithoutLastTerrain)
-        if (Constants.remove + tile.lastTerrain.name !in ruleset.tileImprovements) return null
-        val newTile = tile.clone(addUnits = false)
-        newTile.setTerrainTransients()
-        newTile.removeTerrainFeature(newTile.lastTerrain.name)
-        return newTile
     }
 
     private fun Table.addImprovementRow(improvement: TileImprovement, problemReport: ProblemReport) {
@@ -314,61 +384,8 @@ class ImprovementPickerScreen(
         return statsTable
     }
 
-    private class ProblemReport {
-        var suggestRemoval = false
-        var removalImprovement: TileImprovement? = null
-        /** `first` is the text, `second` the Civilopedia link */
-        val proposedSolutions = mutableSetOf<Pair<String, String?>>()
-        fun isEmpty() = proposedSolutions.isEmpty()
-        fun isQueueable() = removalImprovement != null && proposedSolutions.size == 1
-    }
-
-    private fun getProblemReport(improvement: TileImprovement) = getProblemReport(tile, tileWithoutLastTerrain, improvement)
-    private fun getProblemReport(tile: Tile, tileWithoutLastTerrain: Tile?, improvement: TileImprovement): ProblemReport? {
-        val report = ProblemReport()
-        var unbuildableBecause = tile.improvementFunctions.getImprovementBuildingProblems(improvement, unit.cache.state).toSet()
-        if (!canReport(unbuildableBecause) && tileWithoutLastTerrain != null) {
-            // Try after pretending to have removed the top terrain layer.
-            unbuildableBecause = tileWithoutLastTerrain.improvementFunctions.getImprovementBuildingProblems(improvement, unit.cache.state).toSet()
-            if (!canReport(unbuildableBecause)) return null
-            report.suggestRemoval = true
-        }
-        if (!canReport(unbuildableBecause)) return null
-
-        with(report) {
-            if (suggestRemoval) {
-                val removalName = Constants.remove + tile.lastTerrain.name
-                removalImprovement = ruleset.tileImprovements[removalName]
-                if (removalImprovement != null) {
-                    // Check for removals that need a tech that's not yet researched
-                    val cannotRemoveReport = getProblemReport(tile, null, removalImprovement!!)
-                    if (cannotRemoveReport != null) proposedSolutions.addAll(cannotRemoveReport.proposedSolutions)
-                    proposedSolutions.add("${Constants.remove}[${tile.lastTerrain.name}] first" to removalImprovement!!.makeLink())
-                }
-            }
-
-            if (ImprovementBuildingProblem.MissingTech in unbuildableBecause) {
-                val maxEraNumber = if (maxErasForward == Int.MAX_VALUE) Int.MAX_VALUE else currentPlayerCiv.getEraNumber()
-                for (tech in improvement.requiredTechnologies(ruleset)) {
-                    val techEra = tech?.era(ruleset) ?: continue
-                    if (unit.civ.tech.isResearched(tech.name)) continue
-                    if (techEra.eraNumber > maxEraNumber) return null
-                    proposedSolutions.add("Research [${tech.name}] first" to tech.makeLink())
-                }
-            }
-            if (ImprovementBuildingProblem.NotJustOutsideBorders in unbuildableBecause)
-                proposedSolutions.add("Have this tile close to your borders" to null)
-            if (ImprovementBuildingProblem.OutsideBorders in unbuildableBecause)
-                proposedSolutions.add("Have this tile inside your empire" to null)
-            if (ImprovementBuildingProblem.MissingResources in unbuildableBecause) {
-                val resources = improvement.getMatchingUniques(UniqueType.ConsumesResources)
-                    .filter { currentPlayerCiv.getResourceAmount(it.params[1]) < it.params[0].toInt() }
-                    .map { "Acquire more [${it.params[1]}]" to ruleset.tileResources[it.params[1]]?.makeLink() }
-                proposedSolutions.addAll(resources)
-            }
-        }
-        return report
-    }
+    private fun getProblemReport(improvement: TileImprovement) =
+        getProblemReport(tile, tileWithoutLastTerrain, improvement, unit, maxErasForward)
 
     private fun getExplanationActor(improvement: TileImprovement, report: ProblemReport): Actor? {
         fun getPickNowButton(action: ()->Unit) = "Pick now!".toTextButton(SmallButtonStyle()).onClick(action)

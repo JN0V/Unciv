@@ -1101,8 +1101,6 @@ class Tile : IsPartOfGameInfoSerialization {
 
         improvementQueue.clear()
         queueImprovement(improvement, civInfo, unit)
-        // The tutorial task is about giving the order, not waiting for the result
-        if (civInfo.isCurrentPlayer()) UncivGame.Current.settings.addCompletedTutorialTask("Construct an improvement")
     }
 
     /** Clears [improvementQueue] */

@@ -119,7 +119,7 @@ class TechPickerPortraitScreen(
         if (done.isNotEmpty()) {
             val toggle = Table()
             toggle.touchable = Touchable.enabled
-            toggle.add("{Researched}: [${done.size}]".toLabel(fontSize = 16, fontColor = muted, alignment = Align.left)).expandX().left()
+            toggle.add(("{Researched}: ".tr() + done.size.tr()).toLabel(fontSize = 16, fontColor = muted, alignment = Align.left)).expandX().left()
             toggle.add(ImageGetter.getImage("OtherIcons/BackArrow").apply { rotation = if (showResearched) -90f else 90f; setOrigin(Align.center) }
                 .let { val h = Table(); h.add(it).size(14f); h })
             toggle.onClick { showResearched = !showResearched; rebuild() }

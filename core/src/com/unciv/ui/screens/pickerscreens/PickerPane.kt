@@ -32,10 +32,11 @@ class PickerPane(
     /** A button on the lower right of [bottomTable] you can use for a "OK"-type action, starts disabled */
     val rightSideButton = "".toTextButton()
 
-    private val portraitPane = com.badlogic.gdx.Gdx.graphics.height > com.badlogic.gdx.Gdx.graphics.width
-    private val screenSplit = if (portraitPane) 0.6f else 0.85f
+    /** Phone layout - follows the Layout setting, not the raw window orientation */
+    private val portrait = UncivGame.Current.settings.usePortraitLayout(com.badlogic.gdx.Gdx.graphics.height > com.badlogic.gdx.Gdx.graphics.width)
+    private val screenSplit = if (portrait) 0.6f else 0.85f
     // Phone: the description sits under the content, so let it have room (victory texts, tech unlocks) instead of 2 visible lines
-    private val maxBottomTableHeight = if (portraitPane) 230f else 150f     // about 7 lines of normal text in landscape
+    private val maxBottomTableHeight = if (portrait) 230f else 150f     // about 7 lines of normal text in landscape
 
     /**
      * The table displaying the choices from which to pick (usually).
@@ -58,8 +59,6 @@ class PickerPane(
         rightSideButton.disable()
         rightSideGroup.addActor(rightSideButton)
 
-        val portrait = com.badlogic.gdx.Gdx.graphics.height > com.badlogic.gdx.Gdx.graphics.width
-            && UncivGame.Current.settings.usePortraitLayout(true)
         if (portrait) {
             // Phone: description on its own full-width row, buttons below it
             bottomTable.add(descriptionScroll).colspan(2).grow().row()

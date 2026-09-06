@@ -147,6 +147,8 @@ class WorldScreen(
     /** Portrait (phone) layout: bottom sheet instead of floating unit/actions/next-turn widgets */
     internal val portraitLayout = game.settings.usePortraitLayout(isPortrait())
     private val isScenarioGame by lazy { ScenarioListScreen.isScenarioGame(gameInfo.gameId) }
+    /** A scenario brings its own briefing and guided tasks: the game's generic tutorial popups would only get in the way (phone) */
+    private val suppressGenericTutorials get() = portraitLayout && isScenarioGame
 
     // Floating Widgets going counter-clockwise
     internal val topBar = WorldScreenTopBar(this)
@@ -412,8 +414,7 @@ class WorldScreen(
     private fun update() {
 
         if (uiEnabled) {
-            // A scenario brings its own briefing and guided tasks: the game's generic tutorial popups would only get in the way (phone)
-            if (!(portraitLayout && isScenarioGame)) displayTutorialsOnUpdate()
+            if (!suppressGenericTutorials) displayTutorialsOnUpdate()
 
             bottomUnitTable.update()
 
@@ -456,7 +457,7 @@ class WorldScreen(
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
 
         topBar.update(selectedCiv)
-        if (techPolicyAndDiplomacy.update())
+        if (techPolicyAndDiplomacy.update() && !suppressGenericTutorials)
             displayTutorial(TutorialTrigger.OtherCivEncountered)
         if (tutorialTaskTable.isVisible) positionTutorialTaskTable()  // after the tech/policy buttons got their size
 
@@ -875,9 +876,9 @@ class WorldScreen(
     private var hadOpenPopups = false
 
     override fun render(delta: Float) {
-        // A popup just closed (briefing, tech discovered...): refresh, so the next tutorial help can open in its place
+        // Phone: a popup just closed (briefing, tech discovered...): refresh, so the next tutorial help can open in its place
         val hasPopups = hasOpenPopups()
-        if (hadOpenPopups && !hasPopups) shouldUpdate = true
+        if (portraitLayout && hadOpenPopups && !hasPopups) shouldUpdate = true
         hadOpenPopups = hasPopups
 
         //  This is so that updates happen in the MAIN THREAD, where there is a GL Context,
@@ -888,7 +889,7 @@ class WorldScreen(
             // Since updating the worldscreen can take a long time, *especially* the first time, we disable input processing to avoid ANRs
             Gdx.input.inputProcessor = null
             update()
-            showTutorialsOnNextTurn()
+            if (!suppressGenericTutorials) showTutorialsOnNextTurn()
             if (Gdx.input.inputProcessor == null) // Update may have replaced the worldscreen with a GreatPersonPickerScreen etc, so the input would already be set
                 Gdx.input.inputProcessor = stage
         }

@@ -227,11 +227,13 @@ class NotificationsScroll(
 
         if (!userSetting.static) {
             restoreButton.unblock()
-            // Unfold unless the player folded exactly this list - also on a fresh WorldScreen (the game rebuilds it
-            // every turn and after most screens), which is why the folded hash lives in the companion object
+            // Phone: unfold unless the player folded exactly this list - also on a fresh WorldScreen (the game rebuilds it
+            // every turn and after most screens), which is why the folded hash lives in the companion object.
+            // Classic layout keeps the upstream rule: a band the player hid stays hidden, a settings change does not unfold it.
             val unseen = notifications.isNotEmpty() && notifications.hashCode() != foldedNotificationsHash
-            if (isHidden && unseen && (contentChanged || userSettingChanged))
-                isHidden = false
+            val unfold = if (worldScreen.portraitLayout) unseen && (contentChanged || userSettingChanged)
+                else contentChanged && !userSettingChanged
+            if (isHidden && unfold) isHidden = false
         }
 
         // Do the positioning here since WorldScreen may also call update when just its geometry changed

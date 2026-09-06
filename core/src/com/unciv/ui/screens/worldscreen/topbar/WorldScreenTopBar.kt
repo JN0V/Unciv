@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Container
@@ -20,6 +21,7 @@ import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.input.onRightClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -191,23 +193,27 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
         val unitSupplyCell: Cell<Actor?>
 
         init {
-            unitSupplyImage.onClick {
+            // Suppressive: in the compact layout the whole table is a tap target too, the icon must not open the overview twice
+            unitSupplyImage.onClickSuppressive {
                 worldScreen.openEmpireOverview(EmpireOverviewCategories.Units)
             }
 
             val overviewButton = if (compact) Button(BaseScreen.skin).apply {
                 add(ImageGetter.getImage("OtherIcons/Cities")).size(22f).pad(6f)
             } else "Overview".toTextButton()
-            overviewButton.onActivation(binding = KeyboardBinding.EmpireOverview) {
-                worldScreen.openEmpireOverview()
-            }
 
             unitSupplyCell = add()
             add(overviewButton).pad(if (compact) 4f else 10f)
             if (compact) {
-                // Whole table is the hit area, not just the small round button
-                touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
-                onClick { worldScreen.openEmpireOverview() }
+                // Whole table is the hit area (tap and keyboard shortcut), not just the small round button - which must not
+                // receive the tap itself, or the overview opens twice
+                overviewButton.touchable = Touchable.disabled
+                touchable = Touchable.enabled
+                onActivation(binding = KeyboardBinding.EmpireOverview) { worldScreen.openEmpireOverview() }
+            } else {
+                overviewButton.onActivation(binding = KeyboardBinding.EmpireOverview) {
+                    worldScreen.openEmpireOverview()
+                }
             }
             pack()
         }

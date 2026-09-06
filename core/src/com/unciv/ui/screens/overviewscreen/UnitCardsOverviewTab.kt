@@ -36,6 +36,12 @@ class UnitCardsOverviewTab(
     init {
         top()
         defaults().growX().pad(4f, 8f, 4f, 8f)
+        rebuild()
+    }
+
+    /** (Re)creates the cards - also after a promotion was picked, so badge and promotion icons are current */
+    private fun rebuild() {
+        clear()
         val civ = viewingPlayer.getCiv()
         val units = civ.units.getCivUnits().toList()
         val military = units.filter { it.isMilitary() }.sortedBy { it.displayName().tr(hideIcons = true) }
@@ -43,7 +49,7 @@ class UnitCardsOverviewTab(
 
         val supply = civ.stats.getUnitSupply()
         val used = civ.units.getCivUnitsSize()
-        val summary = "{Units}: [$used]".tr() + "  ·  " + "{Unit Supply}: [$supply]".tr()
+        val summary = "{Units}: ".tr() + used.tr() + "  ·  " + "{Unit Supply}: ".tr() + supply.tr()
         add(summary.toLabel(fontSize = 15, fontColor = if (civ.stats.getUnitSupplyDeficit() > 0) warn else muted, alignment = Align.left)).left().padTop(6f).row()
         if (civ.stats.getUnitSupplyDeficit() > 0)
             add("Your units are above supply: production is reduced".toLabel(fontSize = 14, fontColor = warn, alignment = Align.left).apply { wrap = true }).left().row()
@@ -81,8 +87,8 @@ class UnitCardsOverviewTab(
         if (unit.baseUnit.strength > 0) numbers.add("${unit.baseUnit.strength}${Fonts.strength}")
         if (unit.baseUnit.rangedStrength > 0) numbers.add("${unit.baseUnit.rangedStrength}${Fonts.rangedStrength}")
         numbers.add("${unit.getMovementString()}${Fonts.movement}")
-        if (unit.health < 100) numbers.add("${unit.health}/100 HP")
-        if (!unit.isCivilian()) numbers.add("XP ${unit.promotions.XP}/${unit.promotions.xpForNextPromotion()}")
+        if (unit.health < 100) numbers.add("[${unit.health}]/100 HP".tr())
+        if (!unit.isCivilian()) numbers.add("XP [${unit.promotions.XP}]/[${unit.promotions.xpForNextPromotion()}]".tr())
         texts.add(numbers.joinToString("   ").toLabel(fontSize = 14, fontColor = if (unit.health < 100) warn else muted, alignment = Align.left)).left().padTop(2f).row()
 
         // Where
@@ -106,7 +112,11 @@ class UnitCardsOverviewTab(
             badge.add("Promote".toLabel(fontSize = 13))
             badge.touchable = Touchable.enabled
             badge.onClickSuppressive {
-                overviewScreen.game.pushScreen { PromotionPickerScreen(unit) { overviewScreen.select(EmpireOverviewCategories.Units, unit.id.toString()) } }
+                // The picker calls back before it pops itself, so refresh this tab in place (as the classic tab does)
+                overviewScreen.game.pushScreen { PromotionPickerScreen(unit) {
+                    rebuild()
+                    overviewScreen.select(EmpireOverviewCategories.Units, unit.id.toString())
+                } }
             }
             promotions.add(badge).padLeft(4f)
         }
@@ -136,6 +146,8 @@ class UnitCardsOverviewTab(
 
     override fun select(selection: String): Float? {
         val card = findActor<Table>("unit-$selection") ?: return null
-        return card.y
+        validate()
+        // ScrollPane.scrollY counts from the top, Actor.y from the bottom
+        return (height - card.y - card.height).coerceAtLeast(0f)
     }
 }

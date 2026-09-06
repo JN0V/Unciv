@@ -182,7 +182,7 @@ class PolicyPickerPortraitScreen(
         val effect = policy.getDescription().lines().filter { it.isNotBlank() && it != policy.name.tr() }.joinToString("\n")
         if (effect.isNotEmpty())
             texts.add(effect.toLabel(fontSize = 14, fontColor = muted, alignment = Align.left).apply { wrap = true }).growX().left().padTop(2f).row()
-        val missing = policy.requires?.filter { !policies.isAdopted(it) && it != policy.branch.name || (it == policy.branch.name && !policies.isAdopted(it)) } ?: emptyList()
+        val missing = policy.requires?.filter { !policies.isAdopted(it) } ?: emptyList()
         if (!adopted && !pickable && missing.isNotEmpty())
             texts.add(("{Requires}: " + missing.joinToString(", ") { it.tr() }).toLabel(fontSize = 13, fontColor = Color(1f, 0.75f, 0.5f, 1f), alignment = Align.left).apply { wrap = true }).growX().left().padTop(2f).row()
         row.add(texts).growX()

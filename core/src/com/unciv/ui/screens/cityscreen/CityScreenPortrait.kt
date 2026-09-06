@@ -35,15 +35,13 @@ import com.unciv.ui.components.extensions.disable
  *  Phone layout of the [CityScreen]: header (back, name, growth, city paging), a stats row,
  *  the city map in the upper part, then tabs (Build / Tiles / Citizens / Info) over a scrollable panel.
  *
- *  Reuses the classic widgets where they are self-contained ([CityScreenTileTable], [CitizenManagementTable],
- *  [SpecialistAllocationTable], [CityStatsTable]) and rebuilds the construction lists as full-width rows:
+ *  Reuses the classic widgets where they are self-contained ([CitizenManagementTable], [SpecialistAllocationTable])
+ *  and rebuilds the construction lists as full-width rows:
  *  one tap on an available construction adds it to the queue, long press opens the classic context menu.
  */
 class CityScreenPortrait(
     private val cityScreen: CityScreen,
     private val constructionsTable: CityConstructionsTable,
-    private val cityStatsTable: CityStatsTable,
-    private val tileTable: CityScreenTileTable,
     private val razeCityButtonHolder: Table
 ) : Table() {
     enum class Tab(val title: String) { Build("Build"), Tiles("Tiles"), Citizens("Citizens"), Info("Info") }
@@ -65,7 +63,8 @@ class CityScreenPortrait(
         private set
     /** Y (stage coordinates) of the map area's bottom edge, so the [CityScreen] can size its map pane */
     val mapBottom: Float get() = screenStage.height - headerHeight - mapHeight
-    private val headerHeight = 132f
+    /** Height of the header block above the map; the [CityScreen] sizes its map pane with it */
+    val headerHeight = 132f
     // Seb (2026-09-06): the build list below was too tall - the map gets close to half the screen, the list scrolls anyway
     private val mapHeight = (screenStage.height * 0.47f).coerceAtLeast(300f)
 

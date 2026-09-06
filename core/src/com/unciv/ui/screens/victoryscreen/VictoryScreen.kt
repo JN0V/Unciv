@@ -22,7 +22,9 @@ import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.areSecretKeysPressed
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.input.ActivationTypes
 import com.unciv.ui.components.input.KeyCharAndCode
+import com.unciv.ui.components.input.clearActivationActions
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -208,6 +210,7 @@ class VictoryScreen(
             if (!ScenarioListScreen.isScenarioGame(gameInfo.gameId)) return@run
             launchOnGLThread {
                 rightSideButton.setText("Discovery".tr())
+                rightSideButton.clearActivationActions(ActivationTypes.Tap)  // replace "Start new game", do not stack on it
                 rightSideButton.onClick {
                     game.goToMainMenu()
                     game.pushScreen { ScenarioListScreen() }

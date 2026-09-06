@@ -267,15 +267,27 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
     override fun recreate(): BaseScreen = ScenarioListScreen()
 
     companion object {
-        /** gameIds of the scenarios shipped by installed mods; read once per process (the previews are small, the list rarely changes) */
-        private val scenarioGameIds: Set<String> by lazy {
+        /** The scenario files (path and modification time) the cached [scenarioGameIds] were read from */
+        private var scenarioGameIdsKey: List<Pair<String, Long>>? = null
+        private var scenarioGameIds: Set<String> = emptySet()
+
+        /** gameIds of the scenarios shipped by installed mods. The previews are re-read only when the list of scenario
+         *  files changes (a mod installed or updated from the mod manager during the session) - a rare, small read */
+        @Synchronized
+        private fun getScenarioGameIds(): Set<String> {
             val files = UncivGame.Current.files
-            files.getScenarioFiles().mapNotNull { (file, _) ->
-                try { files.loadGamePreviewFromFile(file).gameId } catch (_: Exception) { null }
-            }.toSet()
+            val scenarioFiles = files.getScenarioFiles().map { (file, _) -> file }.toList()
+            val key = scenarioFiles.map { it.path() to it.lastModified() }
+            if (key != scenarioGameIdsKey) {
+                scenarioGameIds = scenarioFiles.mapNotNull { file ->
+                    try { files.loadGamePreviewFromFile(file).gameId } catch (_: Exception) { null }
+                }.toSet()
+                scenarioGameIdsKey = key
+            }
+            return scenarioGameIds
         }
 
         /** True when [gameId] is the id of a scenario shipped by an installed mod */
-        fun isScenarioGame(gameId: String): Boolean = gameId.isNotEmpty() && gameId in scenarioGameIds
+        fun isScenarioGame(gameId: String): Boolean = gameId.isNotEmpty() && gameId in getScenarioGameIds()
     }
 }

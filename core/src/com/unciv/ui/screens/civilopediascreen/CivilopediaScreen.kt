@@ -187,6 +187,8 @@ class CivilopediaScreen(
         } else if (entries.isNotEmpty()) {
             selectEntry(entries.first().name, true)
         }
+        // Phone: tapping a category shows its list, not the auto-selected article (a link still lands on its article: selectEntry follows)
+        if (portraitLayout) showPortraitList()
     }
 
     /** Select a specified entry within the current category. Unknown strings are ignored!

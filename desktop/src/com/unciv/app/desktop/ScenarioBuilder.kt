@@ -306,7 +306,7 @@ object ScenarioBuilder {
         // Enemy city: move its settler to a spot 6 tiles from our capital if the generator put it further
         val enemySettler = enemy.units.getCivUnits().first { it.baseUnit.isCityFounder() }
         val site = game.tileMap.getTilesAtDistance(capital.getCenterTile().position, 6)
-            .firstOrNull { it.isFlatLand() && it.getOwner() == null } ?: enemySettler.currentTile
+            .firstOrNull { it.isFlatLand() && it.getOwner() == null } ?: error("S5: no flat free tile at distance 6")
         enemySettler.removeFromTile()
         enemySettler.putInTile(site)
         val enemyCity = enemy.foundCapital()
@@ -321,7 +321,7 @@ object ScenarioBuilder {
         civ.spawn("Archer", center)
         civ.spawn("Catapult", center)
         civ.diplomacyFunctions.makeCivilizationsMeet(enemy)
-        civ.getDiplomacyManager(enemy)!!.declareWar()
+        enemy.getDiplomacyManager(civ)!!.declareWar()  // Greece is the aggressor
         capital.reassignAllPopulation()
         enemyCity.reassignAllPopulation()
         game.brief(civ, "S5 Briefing")

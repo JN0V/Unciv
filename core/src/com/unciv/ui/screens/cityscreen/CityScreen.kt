@@ -158,14 +158,15 @@ class CityScreen(
         addTiles()
 
         if (portraitLayout) {
-            val portraitLayout = CityScreenPortrait(this, constructionsTable, cityStatsTable, tileTable, razeCityButtonHolder)
+            val portraitLayout = CityScreenPortrait(this, constructionsTable, razeCityButtonHolder)
             portrait = portraitLayout
-            mapScrollPane.setBounds(0f, portraitLayout.mapBottom, stage.width, stage.height - portraitLayout.mapBottom - 132f)
+            mapScrollPane.setBounds(0f, portraitLayout.mapBottom, stage.width, stage.height - portraitLayout.mapBottom - portraitLayout.headerHeight)
             mapScrollPane.layout()
             mapScrollPane.scrollPercentX = 0.5f
             mapScrollPane.scrollPercentY = 0.5f
             mapScrollPane.updateVisualScroll()
             stage.addActor(portraitLayout)
+            globalShortcuts.add(KeyCharAndCode.BACK) { exit() }  // the classic exit button (which carries BACK) is not on stage
         } else {
             // If we are spying then we shoulden't be able to see their construction screen.
             constructionsTable.addActorsToStage()
@@ -207,7 +208,6 @@ class CityScreen(
         if (portrait != null) {
             updateAnnexAndRazeCityButton()
             razeCityButtonHolder.remove()  // the portrait Info tab hosts it instead of the top-center position
-            portrait!!.onTileSelected()
             portrait!!.update()
             updateTileGroups()
             return
@@ -523,6 +523,7 @@ class CityScreen(
         }
 
         selectTile(tileGroup.tileView)
+        portrait?.onTileSelected()  // only on the tap itself, not on every refresh (buttons, lock, buy) while a tile stays selected
         updateAsync()
     }
 

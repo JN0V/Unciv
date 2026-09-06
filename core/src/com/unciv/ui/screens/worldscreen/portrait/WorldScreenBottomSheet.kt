@@ -118,7 +118,7 @@ class WorldScreenBottomSheet(
         nextUnitButton.isVisible = dueUnits
         // Icon + count keeps the row narrow; the next turn button carries the long text
         nextUnitButton.label.setText(worldScreen.selectedGameView.civView.getCiv().units.getIdleUnits().count().tr())
-        if (dueUnits) nextUnitCell.setActor(nextUnitButton).padLeft(6f) else nextUnitCell.setActor(null).padLeft(0f).width(0f)
+        if (dueUnits) nextUnitCell.setActor(nextUnitButton).padLeft(6f) else nextUnitCell.setActor(null).padLeft(0f)
         updateTodo()
         nextTurnButton.pack()
         invalidateHierarchy()
@@ -132,6 +132,7 @@ class WorldScreenBottomSheet(
         actionsRow.clear()
         keyShortcuts.clear()
         openMore = null
+        hintRow.clear()  // before the city branch returns, or a settler's hint would stay under "Open city screen"
         val city = unitTable.selectedCity?.tryGetCityView()  // non-null only for a city we may manage
         if (unit == null && city != null) {
             // A selected own city: one obvious way in, instead of the double tap on the map label
@@ -142,7 +143,6 @@ class WorldScreenBottomSheet(
             actionsRow.add(openButton).width(cellWidth)
             return
         }
-        hintRow.clear()
         if (unit == null || actions.isEmpty()) return
         actions.firstOrNull { it.type == UnitActionType.FoundCity && it.action == null }?.let {
             foundCityBlockedReason(unit)?.let { reason -> hintRow.add(buildHint(reason)).growX().pad(2f) }
@@ -234,7 +234,6 @@ class WorldScreenBottomSheet(
         val sameContinentCity = tile.getTilesInDistance(constants.minimalCityDistance).any { it.isCityCenter() && it.getContinent() == tile.getContinent() }
         val otherContinentCity = tile.getTilesInDistance(constants.minimalCityDistanceOnDifferentContinents).any { it.isCityCenter() && it.getContinent() != tile.getContinent() }
         return when {
-            tile.isWater || tile.isImpassible() -> "Cannot found a city here: water or impassable terrain"
             sameContinentCity -> "Too close to a city: [${constants.minimalCityDistance}] free tiles between two cities at least"
             otherContinentCity -> "Too close to a city on another landmass"
             tile.owningCity != null && tile.owningCity!!.civ != civ -> "This land belongs to another civilization"
