@@ -202,6 +202,9 @@ class Ruleset {
         ?: SubStat.safeValueOf(resourceName)
         ?: tileResources[resourceName]
 
+    /** The victories a player may enable in the new-game options: [Victory.humanOnly] scenario goals are left out */
+    @Readonly fun selectableVictories(): List<Victory> = victories.values.filter { !it.humanOnly }
+
     private inline fun <reified T : INamed> createHashmap(items: Array<T>): LinkedHashMap<String, T> {
         val hashMap = LinkedHashMap<String, T>(items.size)
         for (item in items) {

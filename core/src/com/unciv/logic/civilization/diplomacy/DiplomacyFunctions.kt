@@ -35,8 +35,11 @@ class DiplomacyFunctions(val civInfo: Civilization) {
         if (!otherCiv.isSpectator())
             otherCiv.popupAlerts.add(PopupAlert(AlertType.FirstContact, civInfo.civID))
 
-        if (civInfo.isCurrentPlayer())
+        if (civInfo.isCurrentPlayer()) {
             UncivGame.Current.settings.addCompletedTutorialTask("Meet another civilization")
+            if (otherCiv.isMajorCiv())
+                UncivGame.Current.settings.addCompletedTutorialTask("Meet a major civilization")
+        }
 
 
         if (civInfo.isCityState && otherCiv.isMajorCiv()) {
