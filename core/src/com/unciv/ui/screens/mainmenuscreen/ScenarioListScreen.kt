@@ -138,7 +138,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         primary.background = bg("Primary", primaryColor)
         primary.touchable = Touchable.enabled
         primary.pad(12f)
-        val primaryText = if (current.inProgress) "Resume [${current.name}]" else "Start [${current.name}]"
+        val primaryText = if (current.inProgress) "Resume [${displayName(current)}]" else "Start [${displayName(current)}]"
         primary.add(ImageGetter.getImage("OtherIcons/ForwardArrow")).size(22f).padRight(10f)
         primary.add(primaryText.toLabel(fontSize = 20))
         primary.onActivation { onScenarioChosen(current) }
@@ -164,7 +164,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         card.add(badge).size(44f).padRight(12f)
 
         val texts = Table()
-        texts.add(entry.name.toLabel(fontSize = 19, alignment = Align.left).apply { wrap = true }).growX().left().row()
+        texts.add(displayName(entry).toLabel(fontSize = 19, alignment = Align.left).apply { wrap = true }).growX().left().row()
         val subtitle = subtitleFor(entry)
         if (subtitle.isNotEmpty())
             texts.add(subtitle.toLabel(fontSize = 15, fontColor = muted, alignment = Align.left).apply { wrap = true }).growX().left().padTop(2f).row()
@@ -183,6 +183,10 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
         card.onActivation { onScenarioChosen(entry) }
         return card
     }
+
+    /** The file name, translated by the scenario's mod when it ships a translation (the mod is not active on the main menu) */
+    private fun displayName(entry: ScenarioEntry): String =
+        game.translations.getText(entry.name, game.settings.language, hashSetOf(entry.mod.name), entry.name)
 
     private fun subtitleFor(entry: ScenarioEntry): String {
         val language = game.settings.language
@@ -229,7 +233,7 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
             return
         }
         val popup = Popup(this)
-        popup.addGoodSizedLabel(entry.name, 22).row()
+        popup.addGoodSizedLabel(displayName(entry), 22).row()
         popup.addButton(if (entry.completed) "Continue" else "Resume at turn [${save.turns}]") {
             popup.close(); loadScenario(saveFile)
         }.row()

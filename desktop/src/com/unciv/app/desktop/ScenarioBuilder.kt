@@ -116,8 +116,8 @@ object ScenarioBuilder {
         val gp = GameParameters().apply {
             baseRuleset = MOD
             mods = LinkedHashSet()
-            difficulty = "Découverte"
-            speed = "Découverte"
+            difficulty = "Discovery"
+            speed = "Discovery"
             this.players = ArrayList(players)
             numberOfCityStates = cityStates
             minNumberOfCityStates = cityStates
@@ -181,17 +181,17 @@ object ScenarioBuilder {
     private fun buildS1(outDir: File) {
         val game = newGame(
             radius = 6, seed = 101, players = listOf(Player(HUMAN, PlayerType.Human)),
-            cityStates = 0, victories = listOf("S1 Premiers pas"), noBarbarians = true, maxTurns = 100,
+            cityStates = 0, victories = listOf("S1 First steps"), noBarbarians = true, maxTurns = 100,
         )
         game.brief(game.human(), "S1 Briefing")
-        save(game, outDir, "S1 Premiers pas")
+        save(game, outDir, "S1 First steps")
     }
 
     /** S2: city already founded, a worker, resources nearby; build farm, mine, Granary. */
     private fun buildS2(outDir: File) {
         val game = newGame(
             radius = 6, seed = 202, players = listOf(Player(HUMAN, PlayerType.Human)),
-            cityStates = 0, victories = listOf("S2 Nourrir la ville"), noBarbarians = true, maxTurns = 100,
+            cityStates = 0, victories = listOf("S2 Feed the city"), noBarbarians = true, maxTurns = 100,
         )
         val civ = game.human()
         val city = civ.foundCapital()
@@ -206,7 +206,7 @@ object ScenarioBuilder {
         civ.spawn("Worker", center)
         city.reassignAllPopulation()
         game.brief(civ, "S2 Briefing")
-        save(game, outDir, "S2 Nourrir la ville")
+        save(game, outDir, "S2 Feed the city")
     }
 
     /** S3: explore, meet a civ and a city-state, found a second city. */
@@ -214,7 +214,7 @@ object ScenarioBuilder {
         val game = newGame(
             radius = 9, seed = 303,
             players = listOf(Player(HUMAN, PlayerType.Human), Player("Egypt", PlayerType.AI)),
-            cityStates = 1, victories = listOf("S3 Explorer le monde"), noBarbarians = true, maxTurns = 150,
+            cityStates = 1, victories = listOf("S3 Explore the world"), noBarbarians = true, maxTurns = 150,
             mapType = MapType.pangaea, ruins = true,
         )
         val civ = game.human()
@@ -228,14 +228,14 @@ object ScenarioBuilder {
         civ.spawn("Settler", center)
         city.reassignAllPopulation()
         game.brief(civ, "S3 Briefing")
-        save(game, outDir, "S3 Explorer le monde")
+        save(game, outDir, "S3 Explore the world")
     }
 
     /** S4: two cities, a barbarian camp nearby, hold 30 turns. */
     private fun buildS4(outDir: File) {
         val game = newGame(
             radius = 8, seed = 404, players = listOf(Player(HUMAN, PlayerType.Human)),
-            cityStates = 0, victories = listOf("S4 Défendre la frontière"), noBarbarians = false, maxTurns = 30,
+            cityStates = 0, victories = listOf("S4 Defend the border"), noBarbarians = false, maxTurns = 30,
         )
         val civ = game.human()
         val capital = civ.foundCapital()
@@ -259,7 +259,7 @@ object ScenarioBuilder {
         capital.reassignAllPopulation()
         second.reassignAllPopulation()
         game.brief(civ, "S4 Briefing")
-        save(game, outDir, "S4 Défendre la frontière")
+        save(game, outDir, "S4 Defend the border")
     }
 
     /** S5: at war with Greece, whose single city is 6 tiles away; capture it. */
@@ -267,7 +267,7 @@ object ScenarioBuilder {
         val game = newGame(
             radius = 8, seed = 505,
             players = listOf(Player(HUMAN, PlayerType.Human), Player("Greece", PlayerType.AI)),
-            cityStates = 0, victories = listOf("S5 Prendre une ville"), noBarbarians = true, maxTurns = 150,
+            cityStates = 0, victories = listOf("S5 Take a city"), noBarbarians = true, maxTurns = 150,
         )
         val civ = game.human()
         val enemy = game.getCivilization("Greece")!!
@@ -299,7 +299,7 @@ object ScenarioBuilder {
         capital.reassignAllPopulation()
         enemyCity.reassignAllPopulation()
         game.brief(civ, "S5 Briefing")
-        save(game, outDir, "S5 Prendre une ville")
+        save(game, outDir, "S5 Take a city")
     }
 
     /** S6: a short real game: two AIs, two city-states, ruins and barbarians, 150 turns. */
@@ -311,6 +311,6 @@ object ScenarioBuilder {
             mapType = MapType.pangaea, ruins = true,
         )
         game.brief(game.human(), "S6 Briefing")
-        save(game, outDir, "S6 Premier empire")
+        save(game, outDir, "S6 First empire")
     }
 }

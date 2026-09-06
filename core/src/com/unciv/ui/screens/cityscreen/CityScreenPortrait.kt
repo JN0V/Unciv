@@ -1,6 +1,8 @@
 package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector2
+import com.unciv.ui.screens.worldscreen.RenderEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
@@ -46,6 +48,9 @@ class CityScreenPortrait(
     private val cityView get() = cityScreen.cityView
     private val screenStage get() = cityScreen.stage
 
+    /** The current tutorial task (same as the world screen card) so a newcomer is guided inside the city too */
+    private val taskCard = Table()
+    private var taskCardHash = 0
     private val header = Table()
     private val statsRow = Table()
     private val tabsRow = Table()
@@ -89,12 +94,46 @@ class CityScreenPortrait(
         contentTable.background = bg("Content", panelColor)
         contentTable.add(contentScroll).grow()
         add(contentTable).grow().row()
+
+        taskCard.background = BaseScreen.skinStrings.getUiBackground(
+            "WorldScreen/Portrait/TutorialTaskTable", BaseScreen.skinStrings.roundedEdgeRectangleMidShape, Color(0.06f, 0.1f, 0.32f, 0.94f))
+        taskCard.touchable = Touchable.enabled
+        screenStage.addActor(taskCard)
+    }
+
+    private fun updateTaskCard() {
+        val worldScreen = cityScreen.game.worldScreen
+        val task = if (worldScreen != null && cityScreen.game.settings.showTutorials && cityScreen.canChangeState)
+            worldScreen.getCurrentTutorialTask() else null
+        if (task == null) {
+            taskCard.isVisible = false
+            taskCardHash = 0
+            return
+        }
+        val hash = task.hashCode()
+        if (hash != taskCardHash) {
+            taskCardHash = hash
+            taskCard.clear()
+            val render = RenderEvent(task, worldScreen!!, mode = RenderEvent.Mode.Compact) { cityScreen.updateAsync() }
+            if (!render.isValid) { taskCard.isVisible = false; return }
+            taskCard.add(render).pad(8f)
+            taskCard.onClick { worldScreen.openTutorialTaskPopup(task, cityScreen) { cityScreen.updateAsync() } }
+            taskCard.pack()
+        }
+        // Just above the tabs row, at the bottom of the map area: the city center (worked tiles) stays visible
+        validate()
+        val tabsTop = tabsRow.localToStageCoordinates(Vector2(0f, tabsRow.height)).y
+        taskCard.setPosition(screenStage.width / 2f, tabsTop + 6f, Align.bottom)
+        taskCard.isVisible = true
+        taskCard.toFront()
+        worldScreen!!.explainTutorialTaskIfNew(task, cityScreen) { cityScreen.updateAsync() }
     }
 
     private fun bg(part: String, color: Color) = BaseScreen.skinStrings.getUiBackground(
         "CityScreen/Portrait/$part", BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, color)
 
     fun update() {
+        updateTaskCard()
         updateHeader()
         updateStats()
         updateTabs()

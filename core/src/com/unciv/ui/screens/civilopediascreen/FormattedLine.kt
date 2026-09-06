@@ -320,7 +320,7 @@ class FormattedLine (
                 ColorMarkupLabel(textToDisplay, fontSize, hideIcons = iconCount != 0)
             else
                 textToDisplay.toLabel(labelColor, fontSize, hideIcons = iconCount != 0)
-            label.wrap = !centered && labelWidth > 0f
+            label.wrap = labelWidth > 0f  // centered lines wrap as well: a long title must not widen its container
             label.setAlignment(align)
             if (labelWidth == 0f)
                 table.add(label)

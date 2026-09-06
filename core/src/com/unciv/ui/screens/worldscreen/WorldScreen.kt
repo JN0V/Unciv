@@ -519,7 +519,7 @@ class WorldScreen(
         zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f + bottomOffset, Align.bottomRight)
     }
 
-    private fun getCurrentTutorialTask(): Event? {
+    internal fun getCurrentTutorialTask(): Event? {
         if (!game.settings.tutorialTasksCompleted.contains("Create a trade route")) {
             if (viewingCiv.cache.citiesConnectedToCapitalToMediums.any { it.key.civ == viewingCiv })
                 game.settings.addCompletedTutorialTask("Create a trade route")
@@ -559,20 +559,20 @@ class WorldScreen(
     }
 
     /** Phone: the card only shows the title and the how-to line, the full help (illustration, why, what to know) opens as a popup */
-    private fun openTutorialTaskPopup(tutorialTask: Event) {
-        val popup = Popup(this)
-        popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); shouldUpdate = true }).row()
+    internal fun openTutorialTaskPopup(tutorialTask: Event, onScreen: BaseScreen = this, afterChoice: () -> Unit = { shouldUpdate = true }) {
+        val popup = Popup(onScreen)
+        popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); afterChoice() }).row()
         popup.addCloseButton("Got it")
         popup.open()
     }
 
     /** A task that carries real explanations (more than title + how-to) opens its help once by itself when it first appears,
      *  so a newcomer reads the rule before being asked to apply it. Not while a briefing or another popup is pending. */
-    private fun explainTutorialTaskIfNew(tutorialTask: Event) {
-        if (!portraitLayout || hasOpenPopups() || viewingCiv.popupAlerts.isNotEmpty()) return
+    internal fun explainTutorialTaskIfNew(tutorialTask: Event, onScreen: BaseScreen = this, afterChoice: () -> Unit = { shouldUpdate = true }) {
+        if (!portraitLayout || onScreen.hasOpenPopups() || viewingCiv.popupAlerts.isNotEmpty()) return
         if (tutorialTask.civilopediaText.count { it.text.isNotEmpty() && !it.separator } < 4) return
         if (!explainedTutorialTasks.add("${gameInfo.gameId}/${tutorialTask.name}")) return
-        openTutorialTaskPopup(tutorialTask)
+        openTutorialTaskPopup(tutorialTask, onScreen, afterChoice)
     }
 
     private fun displayTutorialTaskOnUpdate() {
