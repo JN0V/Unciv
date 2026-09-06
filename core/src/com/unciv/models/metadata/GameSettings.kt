@@ -59,6 +59,8 @@ class GameSettings {
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()
     var tutorialTasksCompleted = HashSet<String>()
+    /** gameIds the player has won - lets the scenario list mark completed scenarios */
+    var wonGameIds = HashSet<String>()
 
     enum class LongPressIndicatorSetting {
         Default, Off, On, Debug; // Debug only offered on Debug page of Options

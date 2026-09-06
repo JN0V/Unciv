@@ -160,6 +160,13 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             column1.add(resumeTable).row()
         }
 
+        if (game.files.getScenarioFiles().any()) {
+            val discoveryTable = getMenuButton("Discovery", "OtherIcons/Scenarios", KeyboardBinding.Discovery) {
+                game.pushScreen { ScenarioListScreen() }
+            }
+            column1.add(discoveryTable).row()
+        }
+
         val quickstartTable = getMenuButton("Quickstart", "OtherIcons/Quickstart", KeyboardBinding.Quickstart)
             { quickstartNewGame() }
         column1.add(quickstartTable).row()
@@ -379,6 +386,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                 }
             }
         }
+    }
+
+    /** Development aid (see [BaseScreen.debugScreenshotIfRequested]) */
+    override fun debugAction(action: String) {
+        if (action == "discovery") game.pushScreen { ScenarioListScreen() }
     }
 
     override fun getCivilopediaRuleset(): Ruleset {

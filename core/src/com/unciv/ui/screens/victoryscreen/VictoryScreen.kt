@@ -99,6 +99,7 @@ class VictoryScreen(
 
     init {
         worldScreen.autoPlay.stopAutoPlay()
+        rememberWonGame()
         //**************** Set up the tabs ****************
         splitPane.setFirstWidget(tabs)
         val iconSize = Constants.headingFontSize.toFloat()
@@ -208,6 +209,14 @@ class VictoryScreen(
     override fun dispose() {
         tabs.selectPage(-1)  // Tells Replay page to stop its timer
         super.dispose()
+    }
+
+    /** Remember games the player won, so the scenario list (main menu "Discovery") can mark them completed */
+    private fun rememberWonGame() {
+        val victoryData = gameInfo.victoryData ?: return
+        if (victoryData.winningCiv != playerCiv.civID || gameInfo.gameId.isEmpty()) return
+        val settings = UncivGame.Current.settings
+        if (settings.wonGameIds.add(gameInfo.gameId)) settings.save()
     }
 
     override fun recreate(): BaseScreen = VictoryScreen(worldScreen, tabs.activePage)
