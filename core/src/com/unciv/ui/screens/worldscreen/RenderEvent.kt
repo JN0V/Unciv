@@ -48,7 +48,8 @@ class RenderEvent(
             val textWidth = when (mode) {
                 Mode.Classic -> stageWidth * 0.5f
                 Mode.Compact -> stageWidth * 0.8f
-                Mode.Popup -> stageWidth * 0.78f
+                // Popup: 90% max width minus the popup's own 20+5 padding on each side, with margin - otherwise it scrolls sideways
+                Mode.Popup -> stageWidth * 0.7f
             }
             if (event.text.isNotEmpty()) {
                 add(WrappableLabel(event.text, textWidth).apply {
