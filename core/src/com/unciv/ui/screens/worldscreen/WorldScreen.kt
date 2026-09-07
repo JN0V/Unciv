@@ -906,6 +906,12 @@ class WorldScreen(
 
     /** Development aid (see [BaseScreen.debugScreenshotIfRequested]): env UNCIV_DEBUG_ACTION picks what to do before the capture */
     override fun debugAction(action: String) {
+        if (action.startsWith("tap:")) {
+            // A real tap at window pixel coordinates (y from the top), through the same input processor as a finger
+            val (x, y) = action.removePrefix("tap:").split(",").map { it.toInt() }
+            Gdx.input.inputProcessor?.let { it.touchDown(x, y, 0, 0); it.touchUp(x, y, 0, 0) }
+            return
+        }
         if (action.startsWith("hit:")) {
             val (x, y) = action.removePrefix("hit:").split(",").map { it.toFloat() }
             var actor = stage.hit(x, y, true)

@@ -108,9 +108,14 @@ abstract class BaseScreen : Screen {
         val path = System.getenv("UNCIV_DEBUG_SCREENSHOT") ?: return
         debugFramesRendered++
         Gdx.graphics.requestRendering()  // the game renders on demand; keep frames coming for the capture
-        if (debugFramesRendered == 20) System.getenv("UNCIV_DEBUG_ACTION")?.let { debugAction(it) }
+        // Several actions separated by ';' run 15 frames apart (e.g. "tap:x,y;tap:x,y" to move a unit)
+        val actions = System.getenv("UNCIV_DEBUG_ACTION")?.split(';') ?: emptyList()
+        if (debugFramesRendered >= 20 && (debugFramesRendered - 20) % 15 == 0) {
+            val index = (debugFramesRendered - 20) / 15
+            if (index < actions.size) debugAction(actions[index])
+        }
         val targetScreen = System.getenv("UNCIV_DEBUG_SCREEN") ?: "WorldScreen"  // which screen class to capture
-        if (javaClass.simpleName != targetScreen || debugFramesRendered < 60) return
+        if (javaClass.simpleName != targetScreen || debugFramesRendered < 20 + 15 * actions.size + 40) return
         val pixmap = com.badlogic.gdx.graphics.Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
         com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.absolute(path), pixmap, java.util.zip.Deflater.DEFAULT_COMPRESSION, true)
         pixmap.dispose()

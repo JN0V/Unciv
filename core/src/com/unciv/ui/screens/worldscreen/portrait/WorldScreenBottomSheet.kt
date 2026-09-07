@@ -62,7 +62,7 @@ class WorldScreenBottomSheet(
     /** One muted line under the actions: why a greyed action is not possible here (a newcomer otherwise guesses) */
     private val hintRow = Table()
     private var shownForUnitHash = 0
-    private var shownActionCount = -1
+    private var shownActionsKey = 0
 
     init {
         touchable = Touchable.enabled
@@ -108,9 +108,12 @@ class WorldScreenBottomSheet(
 
         // A selected city (no unit) must also rebuild the row, so its "Open city screen" button appears
         val newHash = unit?.hashCode() ?: unitTable.selectedCity?.getCity()?.hashCode() ?: 0
-        if (newHash != shownForUnitHash || actions.size != shownActionCount) {
+        // The same actions can change state without changing count: a Worker moved off the city centre gets
+        // "Construct improvement" enabled, a unit out of movement gets its actions greyed
+        val actionsKey = actions.map { Triple(it.type, it.action != null, it.isCurrentAction) }.hashCode()
+        if (newHash != shownForUnitHash || actionsKey != shownActionsKey) {
             shownForUnitHash = newHash
-            shownActionCount = actions.size
+            shownActionsKey = actionsKey
             rebuildActions(unit, actions)
         }
 
