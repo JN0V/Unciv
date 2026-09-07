@@ -101,3 +101,29 @@ class HaveCountableMilestoneTests {
         Assert.assertEquals("S2", human.victoryManager.getVictoryTypeAchieved())
     }
 }
+
+/** [com.unciv.models.ruleset.unique.Countables.KnownCivs]: other civilizations met, by civ filter */
+@RunWith(BaseTestRunner::class)
+class KnownCivsCountableTests {
+    @Test
+    fun `known civilizations count only the ones met, excluding self`() {
+        val testGame = TestGame()
+        testGame.makeHexagonalMap(12)  // far enough apart that no city sees another (cities meet on sight)
+        val human = testGame.addCiv(isPlayer = true)
+        val other = testGame.addCiv()
+        val cityState = testGame.addCiv(cityStateType = "Cultured")
+        testGame.addCity(human, testGame.getTile(0, 0))
+        testGame.addCity(other, testGame.getTile(10, 0))
+        testGame.addCity(cityState, testGame.getTile(-10, 0))
+        val context = com.unciv.models.ruleset.unique.GameContext(human)
+        val known = { filter: String -> com.unciv.models.ruleset.unique.Countables.getCountableAmount("Known [$filter] Civilizations", context) }
+
+        Assert.assertEquals(0, known("Major"))
+        human.diplomacyFunctions.makeCivilizationsMeet(cityState)
+        Assert.assertEquals(0, known("Major"))
+        Assert.assertEquals(1, known("City-State"))
+        human.diplomacyFunctions.makeCivilizationsMeet(other)
+        Assert.assertEquals(1, known("Major"))
+        Assert.assertEquals(2, known("all"))
+    }
+}
