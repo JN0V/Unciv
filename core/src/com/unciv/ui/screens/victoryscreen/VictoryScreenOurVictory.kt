@@ -13,10 +13,12 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
 class VictoryScreenOurVictory(
-    worldScreen: WorldScreen
+    private val worldScreen: WorldScreen
 ) : Table(BaseScreen.skin), TabbedPager.IPageExtensions {
     private val header = Table()
     private val stageWidth = worldScreen.stage.width
+    // Declared before init: Kotlin initializes in source order and init builds the columns
+    private val portraitLayout = worldScreen.portraitLayout
 
     init {
         align(Align.top)
@@ -56,7 +58,12 @@ class VictoryScreenOurVictory(
                 else -> Victory.CompletionStatus.Incomplete
             }
             for (button in milestone.getVictoryScreenButtons(completionStatus, playerCiv)) {
-                table.add(button).row()
+                if (portraitLayout) {
+                    // Phone: a long goal ("Have at least 1 known major civilization (0/1)") wraps instead of leaving the screen
+                    button.label.wrap = true
+                    button.label.setAlignment(Align.center)
+                    table.add(button).width(stageWidth - 60f).row()
+                } else table.add(button).row()
             }
         }
         return table

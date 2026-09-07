@@ -569,9 +569,14 @@ class WorldScreen(
     /** Phone: the card only shows the title and the how-to line, the full help (illustration, why, what to know) opens as a popup */
     internal fun openTutorialTaskPopup(tutorialTask: Event, onScreen: BaseScreen = this, afterChoice: () -> Unit = { shouldUpdate = true }) {
         val popup = Popup(onScreen)
-        popup.add(RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup) { popup.close(); afterChoice() }).row()
+        val render = RenderEvent(tutorialTask, this, mode = RenderEvent.Mode.Popup, pinChoices = true) { popup.close(); afterChoice() }
+        popup.add(render).row()
         if (tutorialTask.choices.isEmpty()) popup.addCloseButton("Got it")  // a choice ("Got it") already closes it
-        else popup.clickBehindToClose = true
+        else {
+            // The choice buttons stay visible under the scrolling text instead of hiding at its end
+            for ((text, action) in render.pinnedChoices) popup.addButton(text) { action() }
+            popup.clickBehindToClose = true
+        }
         popup.open()
         // Only vertical scrolling: the vertical scrollbar narrows the visible area, which otherwise lets the text slide sideways
         findScrollPane(popup)?.setScrollingDisabled(true, false)
@@ -934,6 +939,7 @@ class WorldScreen(
                 game.pushScreen { com.unciv.ui.screens.pickerscreens.ImprovementPickerScreen.create(worker.getTile(), worker) {} }
             }
             "overview" -> openEmpireOverview()
+            "victory" -> game.pushScreen { com.unciv.ui.screens.victoryscreen.VictoryScreen(this) }
             "overview:Stats" -> openEmpireOverview(EmpireOverviewCategories.Stats)
             "overview:Units" -> openEmpireOverview(EmpireOverviewCategories.Units)
             "overview:Resources" -> openEmpireOverview(EmpireOverviewCategories.Resources)

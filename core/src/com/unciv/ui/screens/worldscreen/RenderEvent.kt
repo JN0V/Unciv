@@ -30,8 +30,12 @@ class RenderEvent(
     val mode: Mode = Mode.Classic,
     /** [Mode.Compact] only: leave out the how-to line (a one-line strip, e.g. over the city map) */
     val titleOnly: Boolean = false,
+    /** [Mode.Popup] only: keep the choice buttons out of the (scrolling) text, the caller pins them under it - see [pinnedChoices] */
+    val pinChoices: Boolean = false,
     val onChoice: (EventChoice) -> Unit
 ) : Table() {
+    /** With [pinChoices]: the choices as (button text, action) for the caller to place; the action closes through [onChoice] then triggers the choice */
+    val pinnedChoices = ArrayList<Pair<String, () -> Unit>>()
     /** [Compact]: title line only (floating card on a phone). [Popup]: full text and images, wide. */
     enum class Mode { Classic, Compact, Popup }
     private val gameInfo get() = worldScreen.gameInfo
@@ -77,7 +81,10 @@ class RenderEvent(
                     add(event.renderCivilopediaText(textWidth, ::openCivilopedia)).row()
             }
 
-            for (choice in choices!!) addChoice(choice)
+            for (choice in choices!!) {
+                if (pinChoices) pinnedChoices.add(choice.text to { onChoice(choice); choice.triggerChoice(gameInfo.currentPlayerCiv, unit) })
+                else addChoice(choice)
+            }
         }
     }
 
