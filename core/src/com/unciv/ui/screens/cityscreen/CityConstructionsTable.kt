@@ -765,13 +765,18 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         }
     }
 
+    /** The queue widgets may not be built at all (the phone layout draws its own queue and only borrows this
+     *  table's buttons), and [CityScreen.updateAsync] rebuilds them off-thread, so never index blindly here. */
     private fun getSelectedQueueButton(): Actor? {
         if (selectedQueueEntry == 0) {
-            return constructionsQueueTable.cells[0].actor
+            val cells = constructionsQueueTable.cells
+            return if (cells.size > 0) cells[0].actor else null
         }
         if (selectedQueueEntry > 0 && selectedQueueEntry < cityView.constructions.constructionQueue.size) {
             // *2 because it's always the entry and a separator
-            return queueExpander.innerTable.cells[selectedQueueEntry * 2 - 2].actor
+            val cells = queueExpander.innerTable.cells
+            val index = selectedQueueEntry * 2 - 2
+            return if (index < cells.size) cells[index].actor else null
         }
         return null
     }

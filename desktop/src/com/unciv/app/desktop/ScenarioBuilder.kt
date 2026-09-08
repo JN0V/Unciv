@@ -105,6 +105,13 @@ object ScenarioBuilder {
                 println("  camps=${game.barbarians.encampments.map { it.position }} alerts=${human.popupAlerts.map { it.value }}")
                 // nextTurn() runs every AI and stops at the (idle) human: one call = one full round
                 repeat(turns) { game.nextTurn() }
+                // How much the idle player suffered: city health and enemies inside the borders say whether a
+                // "defend the border" scenario actually threatens anyone
+                val health = human.cities.joinToString { "${it.name} ${it.health}" }
+                val hostiles = game.tileMap.values.count { tile ->
+                    tile.getUnits().any { it.civ.isBarbarian || it.civ.isAtWarWith(human) } && tile.getOwner() == human
+                }
+                println("  after: cities=[$health], enemy units inside our borders=$hostiles, camps=${game.barbarians.encampments.size}")
                 println("  simulated $turns turns OK -> turn ${game.turns}, human cities=${human.cities.size}, units=${human.units.getCivUnits().count()}, victory=${game.getAliveMajorCivs().firstOrNull { it.victoryManager.hasWon() }?.civID}")
             } catch (ex: Throwable) {
                 failures++
@@ -271,9 +278,10 @@ object ScenarioBuilder {
     private fun buildS4(outDir: File) {
         val game = newGame(
             radius = 8, seed = 404, players = listOf(Player(HUMAN, PlayerType.Human)),
-            cityStates = 0, victories = listOf("S4 Defend the border"), noBarbarians = false, maxTurns = 30,
+            cityStates = 0, victories = listOf("S4 Defend the border"), noBarbarians = false, maxTurns = 15,
         )
         val civ = game.human()
+        val campTilesSoFar = ArrayList<Tile>()
         val capital = civ.foundCapital()
         capital.population.setPopulation(3)
         capital.cityConstructions.addBuilding("Monument")
@@ -288,10 +296,17 @@ object ScenarioBuilder {
         civ.spawn("Archer", center)
         civ.spawn("Worker", center)
         civ.spawn("Warrior", secondSite)
-        val campTile = game.tileMap.getTilesAtDistance(center.position, 6)
-            .firstOrNull { it.isLand && !it.isImpassible() && it.getOwner() == null && it.isFlatLand() }
-            ?: game.tileMap.getTilesAtDistance(center.position, 6).first { it.isLand && !it.isImpassible() && it.getOwner() == null }
-        game.barbarians.createNewCamp(campTile)
+        // Two camps, so the raids keep coming over the 15 turns instead of ending with the first camp
+        val campTiles = listOf(6, 5).mapNotNull { distance ->
+            game.tileMap.getTilesAtDistance(center.position, distance)
+                .filter { it.isLand && !it.isImpassible() && it.getOwner() == null }
+                .filter { tile -> campTilesSoFar.none { it.aerialDistanceTo(tile) < 4 } }
+                .sortedByDescending { if (it.isFlatLand()) 1 else 0 }
+                .firstOrNull()
+                ?.also { campTilesSoFar.add(it) }
+        }
+        require(campTiles.size == 2) { "S4: could not place two barbarian camps" }
+        for (tile in campTiles) game.barbarians.createNewCamp(tile)
         capital.reassignAllPopulation()
         second.reassignAllPopulation()
         game.brief(civ, "S4 Briefing")

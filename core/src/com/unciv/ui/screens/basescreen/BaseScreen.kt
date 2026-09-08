@@ -121,7 +121,12 @@ abstract class BaseScreen : Screen {
         pixmap.dispose()
         Gdx.app.exit()
     }
-    protected open fun debugAction(action: String) {}
+    /** Development aid: "tap:x,y" sends a real tap at window pixels (y from the top) on any screen */
+    protected open fun debugAction(action: String) {
+        if (!action.startsWith("tap:")) return
+        val (x, y) = action.removePrefix("tap:").split(",").map { it.toInt() }
+        Gdx.input.inputProcessor?.let { it.touchDown(x, y, 0, 0); it.touchUp(x, y, 0, 0) }
+    }
 
     override fun resize(width: Int, height: Int) {
         if (this !is RecreateOnResize) {
