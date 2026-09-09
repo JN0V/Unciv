@@ -43,6 +43,8 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
 
     private val policyButtonHolder = Container<Button?>()
     private val policyScreenButton = Button(skin)
+    private lateinit var policyPlainStyle: Button.ButtonStyle
+    private lateinit var policyReadyStyle: Button.ButtonStyle
     private val diplomacyButtonHolder = Container<Button?>()
     private val diplomacyButton = Button(skin)
     private val undoButtonHolder = Container<Button?>()
@@ -84,6 +86,13 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         }
 
         policyScreenButton.add(ImageGetter.getImage("OtherIcons/Policies")).size(iconSize).pad(iconPad)
+        policyPlainStyle = policyScreenButton.style
+        // Culture's own colour, so the lit button reads as "a policy is waiting", not as an error
+        val readyBackground = BaseScreen.skinStrings.getUiBackground("WorldScreen/PolicyButtonReady",
+            BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, colorFromRGB(102, 58, 148))
+        policyReadyStyle = Button.ButtonStyle(policyPlainStyle).apply {
+            up = readyBackground; down = readyBackground; over = readyBackground; checked = readyBackground
+        }
         policyButtonHolder.onActivation(binding = KeyboardBinding.SocialPolicies) {
             game.pushScreen{ PolicyPickerScreen.create(worldScreen.selectedCiv, worldScreen.canChangeState) }
         }
@@ -164,11 +173,16 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         }
     }
 
+    /** Phone: the button stays lit for as long as a policy can be adopted.
+     *  The engine's own reminder ([com.unciv.logic.civilization.managers.PolicyManager.shouldOpenPolicyPicker])
+     *  only fires on the turn the player first becomes able to adopt, and opening the picker clears it for
+     *  good - adopt nothing and no reminder ever comes back, however much Culture piles up. */
     private fun updatePolicyButton() {
         // Don't show policies until they become relevant
         if (viewingCiv.hasAdoptedPolicies() || viewingCiv.canAdoptPolicy()) {
             policyButtonHolder.touchable = Touchable.enabled
             policyButtonHolder.actor = policyScreenButton
+            if (compact) policyScreenButton.style = if (viewingCiv.canAdoptPolicy()) policyReadyStyle else policyPlainStyle
         } else {
             policyButtonHolder.touchable = Touchable.disabled
             policyButtonHolder.actor = null
