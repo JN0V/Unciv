@@ -109,7 +109,7 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             val peaceTreaty = TradeOffer(Constants.peaceTreaty, TradeOfferType.Treaty, speed = viewingCiv.gameInfo.speed)
             tradeTable.tradeView.theirStagedOffers().add(peaceTreaty)
             tradeTable.tradeView.ourStagedOffers().add(peaceTreaty)
-            tradeTable.offerColumnsTable.update()
+            tradeTable.refreshOffers()
             tradeTable.enableOfferButton(true)
         }
 
@@ -168,9 +168,7 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
     private fun getTradeButton(otherCiv: Civilization): TextButton {
         val tradeButton = "Trade".toTextButton()
         tradeButton.onClick {
-            diplomacyScreen.setTrade(otherCiv).apply {
-                offerColumnsTable.update()
-            }
+            diplomacyScreen.setTrade(otherCiv).refreshOffers()
         }
         if (diplomacyScreen.isNotPlayersTurn()) tradeButton.disable()
         return tradeButton
