@@ -83,8 +83,12 @@ class DiplomacyScreen(
     private val splitPane = SplitPaneCenteringLeftSide()
 
     /** Phone layout: civ list and detail alternate in one column instead of a split pane */
-    private val portraitLayout = game.settings.usePortraitLayout(isPortrait())
+    internal val portraitLayout = game.settings.usePortraitLayout(isPortrait())
     private val portraitHolder = Table()
+    /** Builds every phone page; only instantiated in [portraitLayout] */
+    private val portrait by lazy { DiplomacyPortrait(this) }
+    /** The civ whose detail page is shown, for the back button of a sub-page */
+    private var portraitCiv: Civilization? = null
 
     private val closeButton = getCloseButton(closeButtonSize) { game.popScreen() }
 
@@ -95,7 +99,7 @@ class DiplomacyScreen(
         // (and SplitPane will squeeze even beyond the minWidth our left side supplies - when the right side has a conflicting minWidth, then both get squeezed).
         splitPane.splitAmount = 0.2f.coerceAtLeast(leftSideScroll.prefWidth / stage.width)
 
-        updateLeftSideTable(selectCiv)
+        if (!portraitLayout) updateLeftSideTable(selectCiv)
 
         if (portraitLayout) {
             portraitHolder.setFillParent(true)
@@ -106,15 +110,17 @@ class DiplomacyScreen(
             stage.addActor(splitPane)
         }
 
-        positionCloseButton()
-        stage.addActor(closeButton) // This must come after the split pane so it will be above, that the button will be clickable
+        if (!portraitLayout) {
+            positionCloseButton()
+            stage.addActor(closeButton) // This must come after the split pane so it will be above, that the button will be clickable
+        }
 
         if (selectCiv != null) {
             if (showTrade) {
                 val tradeTable = setTrade(selectCiv)
                 if (selectTrade != null)
                     tradeTable.tradeView.setStagedTrade(selectTrade)
-                tradeTable.offerColumnsTable.update()
+                tradeTable.refreshOffers()
             } else
                 updateRightSide(selectCiv)
         }
@@ -145,27 +151,53 @@ class DiplomacyScreen(
         }
     }
 
+    /** Phone: the list of known civilizations as full-width cards */
     private fun showPortraitList() {
-        portraitHolder.clear()
-        val title = Table()
-        title.add("Diplomacy".toLabel(fontSize = 22)).left().pad(12f, 16f, 6f, 16f)
-        title.add().growX()
-        title.add().width(closeButtonSize + 2 * closeButtonPad)  // keep clear of the floating close button
-        portraitHolder.add(title).growX().row()
-        leftSideTable.top()
-        portraitHolder.add(leftSideScroll).grow()
-        leftSideScroll.scrollPercentX = 0.5f
+        portraitCiv = null
+        val known = viewingCiv.diplomacyFunctions.getKnownCivsSorted().toList()
+        val atWar = known.count { viewingCiv.isAtWarWith(it) }
+        val subtitle = when {
+            known.isEmpty() -> ""
+            atWar > 0 -> "[${known.size}] civilizations known".tr() + " • " + "[$atWar] at war".tr()
+            else -> "[${known.size}] civilizations known".tr()
+        }
+        showPortraitPage(portrait.header("Diplomacy", subtitle) { game.popScreen() },
+            DiplomacyPortrait.Page(portrait.buildList()))
     }
 
-    private fun showPortraitDetail(otherCiv: Civilization) {
+    /** Phone: one page = a header on top, a scrolling body, and an optional footer pinned to the bottom */
+    private fun showPortraitPage(header: Table, page: DiplomacyPortrait.Page) {
         portraitHolder.clear()
-        val backRow = Table()
-        val backButton = IconTextButton(otherCiv.civName, ImageGetter.getImage("OtherIcons/BackArrow"), fontSize = 20)
-        backButton.onClick { showPortraitList() }
-        backRow.add(backButton).left().pad(6f).growX()
-        backRow.add().width(closeButtonSize + 2 * closeButtonPad)  // keep clear of the floating close button
-        portraitHolder.add(backRow).growX().row()
-        portraitHolder.add(rightSideTable).grow()
+        portraitHolder.top()
+        val width = portrait.contentWidth
+        portraitHolder.add(header).width(width).padTop(8f).row()
+        val scroll = ScrollPane(page.body)
+        scroll.setScrollingDisabled(true, false)
+        portraitHolder.add(scroll).width(width + 16f).grow().padBottom(if (page.footer == null) 8f else 0f).row()
+        if (page.footer != null)
+            portraitHolder.add(page.footer).width(width).padBottom(8f).row()
+    }
+
+    /** Phone: the whole page of one civilization */
+    private fun showPortraitPage(otherCiv: Civilization, page: DiplomacyPortrait.Page) {
+        portraitCiv = otherCiv
+        showPortraitPage(portraitHeader(otherCiv, null), page)
+    }
+
+    /** Phone: a sub-page of a civilization's detail page (gift, tribute, demands...) */
+    internal fun showPortraitSubPage(otherCiv: Civilization, body: Table, title: String) {
+        portraitCiv = otherCiv
+        showPortraitPage(portraitHeader(otherCiv, title), DiplomacyPortrait.Page(body))
+    }
+
+    private fun portraitHeader(otherCiv: Civilization, subPageTitle: String?): Table {
+        if (subPageTitle != null)
+            return portrait.header(subPageTitle, otherCiv.civName.tr()) { updateRightSide(otherCiv) }
+        val parts = ArrayList<String>()
+        if (otherCiv.isCityState) parts += "{Type}: {${otherCiv.cityStateType.name}}".tr()
+        else if (otherCiv.nation.leaderName.isNotEmpty()) parts += otherCiv.getLeaderDisplayName().tr(hideIcons = true)
+        parts += (if (viewingCiv.isAtWarWith(otherCiv)) "War" else "Peace").tr()
+        return portrait.header(otherCiv.civName, parts.joinToString(" \u2022 ")) { showPortraitList() }
     }
 
     private fun positionCloseButton() {
@@ -173,6 +205,7 @@ class DiplomacyScreen(
     }
 
     internal fun updateLeftSideTable(selectCiv: Civilization?) {
+        if (portraitLayout) return  // the phone list is a card list, rebuilt each time it is shown
         leftSideTable.clear()
         leftSideTable.add().padBottom(closeButtonPad).row()  // no default pad, and make distance of first civ to top same as for the close button
 
@@ -251,23 +284,38 @@ class DiplomacyScreen(
     }
 
     internal fun updateRightSide(otherCiv: Civilization) {
-        rightSideTable.clear()
         UncivGame.Current.musicController.chooseTrack(otherCiv.civName,
             MusicMood.peaceOrWar(viewingCiv.isAtWarWith(otherCiv)),MusicTrackChooserFlags.setSelectNation)
+        if (portraitLayout) {
+            showPortraitPage(otherCiv,
+                if (otherCiv.isCityState) portrait.buildCityStatePage(otherCiv)
+                else portrait.buildMajorCivPage(otherCiv))
+            return
+        }
+        rightSideTable.clear()
         val content = if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        if (portraitLayout) { content.top(); rightSideTable.top() }  // start at the top, not floating mid-screen
-        rightSideTable.add(ScrollPane(content)).height(if (portraitLayout) stage.height - 70f else stage.height)
-        if (portraitLayout) showPortraitDetail(otherCiv)
+        rightSideTable.add(ScrollPane(content)).height(stage.height)
     }
 
     //region Major Civ Diplomacy
 
-    internal fun setTrade(otherCiv: Civilization): TradeTable {
-        rightSideTable.clear()
+    internal fun setTrade(otherCiv: Civilization): TradeUi {
+        if (portraitLayout) {
+            // The phone trade page brings its own tabs and scrolling list - it is the page, not a cell in one
+            portraitCiv = otherCiv
+            val tradePage = TradePortraitTable(this, viewingCivView,
+                viewingCivView.gameView.getForeignCivView(otherCiv))
+            portraitHolder.clear()
+            portraitHolder.top()
+            portraitHolder.add(portrait.header("Trade", otherCiv.civName.tr()) { updateRightSide(otherCiv) })
+                .width(portrait.contentWidth).padTop(8f).row()
+            portraitHolder.add(tradePage).width(portrait.contentWidth).grow().row()
+            return tradePage
+        }
         val tradeTable = TradeTable(viewingCivView, viewingCivView.gameView.getForeignCivView(otherCiv), this)
+        rightSideTable.clear()
         rightSideTable.add(tradeTable)
-        if (portraitLayout) showPortraitDetail(otherCiv)
         return tradeTable
     }
 
@@ -360,7 +408,7 @@ class DiplomacyScreen(
             declareWarButton.setText(declareWarButton.text.toString() + " (${turnsToPeaceTreaty.tr()}${Fonts.turn})")
         }
         declareWarButton.onClick {
-            ConfirmPopup(this, getDeclareWarButtonText(otherCiv), "Declare war") {
+            ConfirmPopup(this, getDeclareWarConfirmText(otherCiv), "Declare war") {
                 diplomacyManager.declareWar()
                 setRightSideFlavorText(otherCiv, otherCiv.nation.attacked, "Very well.")
                 updateLeftSideTable(otherCiv)
@@ -373,7 +421,7 @@ class DiplomacyScreen(
         return declareWarButton
     }
 
-    private fun getDeclareWarButtonText(otherCiv: Civilization): String {
+    internal fun getDeclareWarConfirmText(otherCiv: Civilization): String {
         val messageLines = arrayListOf<String>()
         messageLines += "Declare war on [${otherCiv.civName}]?"
         
@@ -427,6 +475,17 @@ class DiplomacyScreen(
         responseButton.keyShortcuts.add(KeyCharAndCode.SPACE)
         diplomacyTable.add(responseButton)
 
+        if (portraitLayout) {
+            val page = portrait.pageTable()
+            page.add(LeaderIntroTable(otherCiv)).padTop(20f).row()
+            page.add(flavorText.toLabel(alignment = Align.center).apply { wrap = true }).padTop(12f).row()
+            page.add(DiplomacyPortrait.bigButton(response, DiplomacyPortrait.primaryColor, true) {
+                updateRightSide(otherCiv)
+            }).minHeight(52f).padTop(20f).row()
+            updateLeftSideTable(otherCiv)
+            showPortraitPage(otherCiv, DiplomacyPortrait.Page(page))
+            return
+        }
         rightSideTable.clear()
         rightSideTable.add(diplomacyTable)
     }
@@ -445,10 +504,12 @@ class DiplomacyScreen(
      *  _Caller is responsible to not exceed this **including its own padding**_
      */
     // Note breaking the rule above will squeeze the leftSideScroll to the left - cumulatively.
-    internal fun getTradeColumnsWidth() = rightSideWidth() / 2
+    internal fun getTradeColumnsWidth() =
+        if (portraitLayout) stage.width - 16f else rightSideWidth() / 2
 
     /** Recommended Cell width for wrappable Labels spanning the right side, e.g. city-state protectors */
-    internal fun rightSideLabelWidth() = rightSideWidth() - 40f
+    internal fun rightSideLabelWidth() =
+        if (portraitLayout) stage.width - 56f else rightSideWidth() - 40f
 
     private fun rightSideWidth(): Float {
         splitPane.validate() // Ensure rightSideTable is sized
