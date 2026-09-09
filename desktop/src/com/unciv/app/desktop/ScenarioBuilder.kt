@@ -20,6 +20,7 @@ import com.unciv.models.metadata.GameSetupInfo
 import com.unciv.models.metadata.Player
 import com.unciv.models.ruleset.RulesetCache
 import java.io.File
+import java.util.UUID
 
 /**
  * Headless generator for the "Unciv Découverte" discovery scenarios.
@@ -65,6 +66,10 @@ object ScenarioBuilder {
         buildS4(outDir)
         buildS5(outDir)
         buildS6(outDir)
+        buildS7(outDir)
+        buildS8(outDir)
+        buildS9(outDir)
+        buildS10(outDir)
         println("Done: ${outDir.listFiles()?.map { it.name }}")
     }
 
@@ -83,7 +88,15 @@ object ScenarioBuilder {
                 for (civ in game.civilizations.filter { !it.isBarbarian && !it.isSpectator() }) {
                     val cities = civ.cities.joinToString { "${it.name}@${it.location}(pop ${it.population.population}, ${it.cityConstructions.getBuiltBuildings().map { b -> b.name }})" }
                     val units = civ.units.getCivUnits().groupBy { it.name }.map { "${it.value.size}x${it.key}" }
+                    if (civ == human) println("  gold=${civ.gold} resources=${civ.getCivResourcesByName().filterValues { amount -> amount != 0 }}")
                     if (civ == human) for (city in civ.cities) {
+                        city.cityStats.update()
+                        val stats = city.cityStats.currentCityStats
+                        println("  ${city.name}: pop ${city.population.population} owned tiles ${city.getTiles().count()}" +
+                            " food ${stats.food.toInt()} prod ${stats.production.toInt()} science ${stats.science.toInt()}" +
+                            " culture ${stats.culture.toInt()} gold ${stats.gold.toInt()}" +
+                            " river=${city.getCenterTile().isAdjacentToRiver()} coastal=${city.getCenterTile().isAdjacentToCoast()}" +
+                            " specialists=${city.population.specialistAllocations}")
                         // For each resource: is it visible to the human (its revealedBy tech known)? A hidden one
                         // means the briefing promises a tile the player cannot see.
                         val near = city.getCenterTile().getTilesInDistance(2).filter { it.resource != null }
@@ -143,6 +156,57 @@ object ScenarioBuilder {
         if (tile.terrainFeatures != features) tile.setTerrainFeatures(features)
         tile.setTileResource(ruleset.tileResources[resource]!!, majorDeposit = true)
         return tile
+    }
+
+    /** Puts [resource] on a Coast tile next to [center] (distance 1, else 2). The capital must already be coastal. */
+    private fun GameInfo.ensureWaterResource(center: Tile, resource: String): Tile {
+        val tile = center.getTilesInDistance(2)
+            .filter { it.baseTerrain == Constants.coast && it.resource == null && it.naturalWonder == null }
+            .sortedBy { it.aerialDistanceTo(center) }
+            .firstOrNull() ?: error("No free Coast tile within 2 of ${center.position}")
+        tile.setTileResource(ruleset.tileResources[resource]!!, majorDeposit = true)
+        return tile
+    }
+
+    /** Every Coast tile a Trireme starting next to [from] can reach without ever entering the Ocean. */
+    private fun coastReachableFrom(from: Tile): Set<Tile> {
+        val seen = HashSet<Tile>()
+        val queue = ArrayDeque<Tile>()
+        for (tile in from.neighbors) if (tile.baseTerrain == Constants.coast && seen.add(tile)) queue.add(tile)
+        while (queue.isNotEmpty())
+            for (next in queue.removeFirst().neighbors)
+                if (next.baseTerrain == Constants.coast && seen.add(next)) queue.add(next)
+        return seen
+    }
+
+    /** Gives [city] the two rings around it and makes sure it feeds itself.
+     *  Map generation is not reproducible tile for tile even with a fixed seed, so a city that starts
+     *  bigger than the generator's default must be given room to work, then shrunk if it still starves:
+     *  a briefing that promises a prosperous capital must never open on a starving one. */
+    private fun feed(city: com.unciv.logic.city.City, minPopulation: Int) {
+        for (tile in city.getCenterTile().getTilesInDistance(2))
+            if (tile.getOwner() == null) city.expansion.takeOwnership(tile)
+        city.reassignPopulation()
+        city.cityStats.update()
+        while (city.cityStats.currentCityStats.food < 0 && city.population.population > minPopulation) {
+            city.population.setPopulation(city.population.population - 1)
+            city.reassignPopulation()
+            city.cityStats.update()
+        }
+        require(city.cityStats.currentCityStats.food >= 0) {
+            "${city.name} starves (${city.cityStats.currentCityStats.food} Food) at population ${city.population.population}"
+        }
+    }
+
+    /** Moves every unit of [civ] next to [target] (the generator's start position is not always what a scenario needs). */
+    private fun relocateUnits(civ: Civilization, target: Tile) {
+        val units = civ.units.getCivUnits().toList()
+        for (unit in units) unit.removeFromTile()
+        for (unit in units) {
+            val tile = target.getTilesInDistance(3).firstOrNull { unit.movement.canMoveTo(it) }
+                ?: error("No room for ${unit.name} near ${target.position}")
+            unit.putInTile(tile)
+        }
     }
 
     private fun newGame(
@@ -213,6 +277,9 @@ object ScenarioBuilder {
 
     private fun save(game: GameInfo, outDir: File, name: String) {
         game.currentPlayer = HUMAN
+        // A stable id derived from the scenario name: rebuilding the mod must not lose the player's
+        // "Completed" marks (GameSettings.wonGameIds) nor the per-scenario tutorial state, both keyed by gameId.
+        game.gameId = UUID.nameUUIDFromBytes(name.toByteArray(Charsets.UTF_8)).toString()
         val text = UncivFiles.gameInfoToString(game, forceZip = false)
         File(outDir, name).writeText(text)
         println("Wrote $name (${text.length} chars)")
@@ -353,15 +420,187 @@ object ScenarioBuilder {
         save(game, outDir, "S5 Take a city")
     }
 
-    /** S6: a short real game: two AIs, two city-states, ruins and barbarians, 150 turns. */
+    /** S6: a coastal capital with Fish; work the sea, then sail to the people on the next island. */
     private fun buildS6(outDir: File) {
+        val game = newGame(
+            radius = 8, seed = 616,
+            players = listOf(Player(HUMAN, PlayerType.Human), Player("Greece", PlayerType.AI)),
+            cityStates = 0, victories = listOf("S6 Take to the sea"), noBarbarians = true, maxTurns = 100,
+            mapType = MapType.archipelago,
+        )
+        val civ = game.human()
+        // The briefing promises a city on the shore: move the whole start to a coastal tile if the generator did not
+        val start = civ.units.getCivUnits().first { it.baseUnit.isCityFounder() }.currentTile
+        if (!start.isAdjacentToCoast()) {
+            val shore = start.getTilesInDistance(6)
+                .filter { it.isLand && !it.isImpassible() && it.isAdjacentToCoast() && it.getOwner() == null }
+                .minByOrNull { it.aerialDistanceTo(start) } ?: error("S6: no coastal tile near the start")
+            relocateUnits(civ, shore)
+        }
+        val capital = civ.foundCapital()
+        val center = capital.getCenterTile()
+        require(center.isAdjacentToCoast()) { "S6: the capital is not coastal" }
+        capital.population.setPopulation(4)
+        capital.cityConstructions.addBuilding("Monument")
+        capital.cityConstructions.addBuilding("Granary")
+        // Sailing: Work Boats, Fishing Boats, Trireme. Optics: Lighthouse and embarking. Compass: Harbor.
+        civ.give("Pottery", "Sailing", "Optics", "Compass")
+        civ.addGold(200)
+        // Fish next to the city, so the Work Boat has something to improve from the first turns
+        val fish = game.ensureWaterResource(center, "Fish")
+        capital.expansion.takeOwnership(fish)
+        civ.spawn("Work Boats", center)
+        civ.spawn("Worker", center)
+        // Greece lives across the water, on a shore a Trireme can reach without ever crossing the Ocean
+        val reachable = coastReachableFrom(center)
+        val enemy = game.getCivilization("Greece")!!
+        val site = game.tileMap.values.asSequence()
+            .filter { it.isLand && !it.isImpassible() && it.getOwner() == null }
+            .filter { it.getContinent() != center.getContinent() }
+            .filter { it.aerialDistanceTo(center) in 5..10 }
+            .filter { tile -> tile.neighbors.any { it in reachable } }
+            .sortedBy { it.aerialDistanceTo(center) }
+            .firstOrNull() ?: error("S6: no other island a Trireme can reach")
+        relocateUnits(enemy, site)
+        val enemyCity = enemy.foundCapital()
+        enemyCity.population.setPopulation(3)
+        enemy.give("Pottery", "Sailing")
+        capital.reassignAllPopulation()
+        feed(capital, minPopulation = 3)
+        enemyCity.reassignAllPopulation()
+        game.brief(civ, "S6 Briefing")
+        save(game, outDir, "S6 Take to the sea")
+    }
+
+    /** S7: upgrade to Legions, research Engineering (a new era) for the Fort, spend the Great General on a Citadel. */
+    private fun buildS7(outDir: File) {
+        val game = newGame(
+            radius = 8, seed = 717,
+            players = listOf(Player(HUMAN, PlayerType.Human), Player("Greece", PlayerType.AI)),
+            cityStates = 0, victories = listOf("S7 Forge an army"), noBarbarians = true, maxTurns = 100,
+        )
+        val civ = game.human()
+        val enemy = game.getCivilization("Greece")!!
+        val capital = civ.foundCapital()
+        capital.population.setPopulation(6)
+        for (building in listOf("Monument", "Granary", "Walls", "Barracks", "Library"))
+            capital.cityConstructions.addBuilding(building)
+        // Everything up to the Classical era: Engineering (Medieval, unlocks the Fort) is what the player researches
+        civ.give("Pottery", "Mining", "Masonry", "Archery", "Bronze Working", "Writing", "The Wheel",
+            "Iron Working", "Mathematics", "Construction")
+        civ.addGold(400)
+        // Engineering is the scenario's research (a new era, and the Fort with it): pre-selected so the
+        // very first "pick a technology" prompt does not send the player down another branch
+        civ.tech.techsToResearch.add("Engineering")
+        val center = capital.getCenterTile()
+        // The Legion needs Iron: the hill is ours and the Mine is already dug, so the upgrade works from turn 1
+        val iron = game.ensureResource(center, "Iron", null, hill = true)
+        capital.expansion.takeOwnership(iron)
+        iron.setImprovement("Mine")
+        civ.spawn("Warrior", center)
+        civ.spawn("Warrior", center)
+        civ.spawn("Archer", center)
+        civ.spawn("Worker", center)
+        // The Citadel must be reachable inside the scenario: the General is there from the start
+        civ.spawn("Great General", center)
+        // Greece: same era, walls, a small army, and it declared war - a rival at the player's own pace
+        val site = game.tileMap.getTilesAtDistance(center.position, 8).firstOrNull { it.isFlatLand() && it.getOwner() == null }
+            ?: game.tileMap.getTilesAtDistance(center.position, 8).first { it.isLand && !it.isImpassible() && it.getOwner() == null }
+        relocateUnits(enemy, site)
+        val enemyCity = enemy.foundCapital()
+        enemyCity.population.setPopulation(5)
+        enemyCity.cityConstructions.addBuilding("Walls")
+        enemy.give("Pottery", "Mining", "Masonry", "Archery", "Bronze Working")
+        val enemyCenter = enemyCity.getCenterTile()
+        enemy.spawn("Spearman", enemyCenter)
+        enemy.spawn("Spearman", enemyCenter)
+        enemy.spawn("Archer", enemyCenter)
+        civ.diplomacyFunctions.makeCivilizationsMeet(enemy)
+        enemy.getDiplomacyManager(civ)!!.declareWar()  // Greece is the aggressor
+        capital.reassignAllPopulation()
+        feed(capital, minPopulation = 4)
+        enemyCity.reassignAllPopulation()
+        game.brief(civ, "S7 Briefing")
+        save(game, outDir, "S7 Forge an army")
+    }
+
+    /** S8: a peaceful builder scenario - a wonder, an Academy, the Water Mill on its river, a road, a luxury. */
+    private fun buildS8(outDir: File) {
+        val game = newGame(
+            radius = 8, seed = 818, players = listOf(Player(HUMAN, PlayerType.Human)),
+            cityStates = 0, victories = listOf("S8 Make it prosper"), noBarbarians = true, maxTurns = 100,
+        )
+        val civ = game.human()
+        val capital = civ.foundCapital()
+        val center = capital.getCenterTile()
+        capital.population.setPopulation(8)
+        for (building in listOf("Monument", "Granary", "Library", "University"))
+            capital.cityConstructions.addBuilding(building)
+        civ.give("Pottery", "Mining", "Animal Husbandry", "Masonry", "Calendar", "Writing", "The Wheel",
+            "Trapping", "Mathematics", "Construction", "Philosophy", "Civil Service", "Theology", "Education")
+        civ.addGold(300)
+        // The Water Mill demands a river along the city: dig one if the generator put the capital away from water
+        if (!center.isAdjacentToRiver()) {
+            val neighbour = center.neighbors.first { it.isLand && !it.isImpassible() }
+            center.setConnectedByRiver(neighbour, true)
+        }
+        require(center.isAdjacentToRiver()) { "S8: the capital is not on a river" }
+        // A luxury next to the city: Wine, improved by a Plantation (Calendar is known)
+        val wine = game.ensureResource(center, "Wine", Constants.grassland, hill = false)
+        capital.expansion.takeOwnership(wine)
+        // Second city 4 tiles away (3 free tiles between): the road the scenario asks for is 3 tiles long
+        val site = game.tileMap.getTilesAtDistance(center.position, 4)
+            .firstOrNull { it.isFlatLand() && it.getTilesInDistance(1).all { t -> t.isLand } }
+            ?: game.tileMap.getTilesAtDistance(center.position, 4).first { it.isLand && !it.isImpassible() }
+        val second = civ.addCity(site.position)
+        second.population.setPopulation(3)
+        second.cityConstructions.addBuilding("Monument")
+        // Own every tile on the way, so the three road tiles are inside our borders and can be counted
+        var walk = center
+        var steps = 0
+        while (walk.aerialDistanceTo(site) > 1 && steps++ < 10) {
+            walk = walk.neighbors.filter { it.isLand && !it.isImpassible() }
+                .minByOrNull { it.aerialDistanceTo(site) } ?: break
+            if (walk != site && walk.getOwner() == null) capital.expansion.takeOwnership(walk)
+        }
+        civ.spawn("Worker", center)
+        civ.spawn("Worker", site)
+        civ.spawn("Warrior", center)
+        capital.reassignAllPopulation()
+        second.reassignAllPopulation()
+        // Two scholars in the University: a Great Scientist arrives within a few turns, the Academy with it
+        capital.manualSpecialists = true
+        capital.population.specialistAllocations.clear()
+        capital.population.specialistAllocations.add("Scientist", 2)
+        // reassignPopulation keeps the manual specialists and puts every other citizen back on a tile;
+        // unassignExtraPopulation alone left them idle and the city starved (-4 Food)
+        feed(capital, minPopulation = 6)
+        civ.greatPeople.greatPersonPointsCounter.add("Great Scientist", 40)
+        game.brief(civ, "S8 Briefing")
+        save(game, outDir, "S8 Make it prosper")
+    }
+
+    /** S9: the short full game - one rival, one city-state, 80 turns. */
+    private fun buildS9(outDir: File) {
+        val game = newGame(
+            radius = 9, seed = 919,
+            players = listOf(Player(HUMAN, PlayerType.Human), Player("Egypt", PlayerType.AI)),
+            cityStates = 1, victories = listOf("Domination", "Time"), noBarbarians = false, maxTurns = 80,
+            mapType = MapType.pangaea, ruins = true,
+        )
+        game.brief(game.human(), "S9 Briefing")
+        save(game, outDir, "S9 First empire")
+    }
+
+    /** S10: the long full game (was S6): two AIs, two city-states, ruins and barbarians, 150 turns. */
+    private fun buildS10(outDir: File) {
         val game = newGame(
             radius = 11, seed = 606,
             players = listOf(Player(HUMAN, PlayerType.Human), Player("Egypt", PlayerType.AI), Player("Greece", PlayerType.AI)),
             cityStates = 2, victories = listOf("Domination", "Time"), noBarbarians = false, maxTurns = 150,
             mapType = MapType.pangaea, ruins = true,
         )
-        game.brief(game.human(), "S6 Briefing")
-        save(game, outDir, "S6 First empire")
+        game.brief(game.human(), "S10 Briefing")
+        save(game, outDir, "S10 Great empire")
     }
 }

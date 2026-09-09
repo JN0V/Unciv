@@ -44,8 +44,14 @@ class ScenarioListScreen : BaseScreen(), RecreateOnResize {
 
     private val entries: List<ScenarioEntry> = game.files.getScenarioFiles()
         .map { (file, mod) -> ScenarioEntry(file.name(), file, mod) }
-        .sortedWith(compareBy({ it.mod.name }, { it.name }))
+        .sortedWith(compareBy({ it.mod.name }, { scenarioNumber(it.name) }, { it.name }))
         .toList()
+
+    /** "S10 Great empire" sorts after "S9 First empire": the number, not the text, orders the course. */
+    private fun scenarioNumber(name: String): Int {
+        val digits = name.removePrefix("S").takeWhile { it.isDigit() }
+        return digits.toIntOrNull() ?: Int.MAX_VALUE
+    }
 
     private val panelColor = Color(0.03f, 0.05f, 0.24f, 0.96f)
     private val todoColor = Color(0.2f, 0.3f, 0.5f, 0.45f)
