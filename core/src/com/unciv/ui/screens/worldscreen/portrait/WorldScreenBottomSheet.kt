@@ -110,7 +110,11 @@ class WorldScreenBottomSheet(
         val newHash = unit?.hashCode() ?: unitTable.selectedCity?.getCity()?.hashCode() ?: 0
         // The same actions can change state without changing count: a Worker moved off the city centre gets
         // "Construct improvement" enabled, a unit out of movement gets its actions greyed
-        val actionsKey = actions.map { Triple(it.type, it.action != null, it.isCurrentAction) }.hashCode()
+        // The tile belongs in the key too: each button holds the action lambda, and that lambda captured the
+        // tile the unit stood on. A Worker moved from one improvable tile to another keeps exactly the same
+        // actions in the same state, and "Construct improvement" would then offer the tile it just left.
+        val actionsKey = Pair(unit?.getTile()?.position,
+            actions.map { Triple(it.type, it.action != null, it.isCurrentAction) }).hashCode()
         if (newHash != shownForUnitHash || actionsKey != shownActionsKey) {
             shownForUnitHash = newHash
             shownActionsKey = actionsKey
